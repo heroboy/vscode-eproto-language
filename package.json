@@ -2,7 +2,7 @@
 	"name": "uitool-eproto-language",
 	"displayName": "UITool EProto Language",
 	"description": "",
-	"version": "0.0.3",
+	"version": "1.0.0",
 	"engines": {
 		"vscode": "^1.107.0"
 	},
