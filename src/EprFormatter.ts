@@ -1,6 +1,6 @@
 import { TextEdit, Range } from "vscode";
 import * as vscode from 'vscode';
-import { isPunc, isSymbolChar, isWhiteSpace } from "./CharUtil";
+//import { isPunc, isSymbolChar, isWhiteSpace } from "./CharUtil";
 
 enum PositionStatus
 {
@@ -155,28 +155,28 @@ export class EprFormatter
 	}
 }
 
-enum TokenType
-{
-	Empty,
-	WhiteSpace,
-	Symbol,
-	Punc,      //运算符
-	StartBlockComment, // "/*"
-	StartLineComment,  // "//"
-	Comment,
-	StartBrace,
-	EndBrace,
-	StatementEnd,      // ";"
-	Other
-}
+// enum TokenType
+// {
+// 	Empty,
+// 	WhiteSpace,
+// 	Symbol,
+// 	Punc,      //运算符
+// 	StartBlockComment, // "/*"
+// 	StartLineComment,  // "//"
+// 	Comment,
+// 	StartBrace,
+// 	EndBrace,
+// 	StatementEnd,      // ";"
+// 	Other
+// }
 
-interface Token
-{
-	readonly type: TokenType;
-	readonly text: string;
-	readonly pos: number;
-	readonly length: number;
-}
+// interface Token
+// {
+// 	readonly type: TokenType;
+// 	readonly text: string;
+// 	readonly pos: number;
+// 	readonly length: number;
+// }
 
 // class LineTokenizer
 // {
