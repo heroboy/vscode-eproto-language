@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { EprParser2 } from './EprParser2';
 import { EprFormatter } from './EprFormatter';
 import { InitEprDocument } from './InitEprDocument';
+import { compileEpr } from './compile';
 const SETTING_KEYS = [
 	'protoname',
 	'protoid',
@@ -269,6 +270,10 @@ export function activate(context: vscode.ExtensionContext)
 			return f.getEdits();
 		},
 	}));
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('eproto.compileCurrentFile', () => compileEpr(context))
+	);
 }
 
 function createKeyword(word: string)

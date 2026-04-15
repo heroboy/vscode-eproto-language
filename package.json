@@ -38,6 +38,10 @@
 			{
 				"command": "eproto.initDocument",
 				"title": "EPR: Init EPR Document"
+			},
+			{
+				"command": "eproto.compileCurrentFile",
+				"title": "EPR: Compile Current EPR File"
 			}
 		],
 		"menus": {
@@ -48,6 +52,10 @@
 				},
 				{
 					"command": "eproto.initDocument",
+					"when": "editorLangId == 'eproto'"
+				},
+				{
+					"command": "eproto.compileCurrentFile",
 					"when": "editorLangId == 'eproto'"
 				}
 			]
