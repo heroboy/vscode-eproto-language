@@ -59,7 +59,12 @@
 				],
 				"url": "./schema/epr-project-schema.json"
 			}
-		]
+		],
+		"configurationDefaults": {
+			"[eproto]": {
+				"files.encoding": "gbk"
+			}
+		}
 	},
 	"main": "./out/extension.js",
 	"devDependencies": {
