@@ -1,0 +1,58 @@
+# Node modules
+node_modules/
+
+# PNPM store
+.pnpm-store/
+
+# Ide/build
+dist/
+out/
+build/
+lib/
+esm/
+cjs/
+
+# TypeScript
+*.tsbuildinfo
+
+# VS Code
+.vscode/
+.vscode-test/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+
+# Coverage
+coverage/
+*.lcov
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Generated extension artifacts
+*.vsix
+
+# Temporary
+*.tmp
+*.temp
+
+# Ignore local testing/workspace files
+.history/

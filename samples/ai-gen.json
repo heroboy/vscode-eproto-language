@@ -1,0 +1,100 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "DragonFragment Protocol",
+	"scopeName": "source.dragonfragment",
+	"fileTypes": ["epr"],
+	"patterns": [
+	  { "include": "#comments" },
+	  { "include": "#header" },
+	  { "include": "#keywords" },
+	  { "include": "#directions" },
+	  { "include": "#types" },
+	  { "include": "#numbers" },
+	  { "include": "#fieldTags" },
+	  { "include": "#arrays" },
+	  { "include": "#identifiers" }
+	],
+	"repository": {
+	  "comments": {
+		"patterns": [
+		  {
+			"name": "comment.line.double-slash.dragonfragment",
+			"match": "//.*$"
+		  }
+		]
+	  },
+  
+	  "header": {
+		"patterns": [
+		  {
+			"name": "meta.header.dragonfragment",
+			"match": "^\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*=.*?;"
+		  }
+		]
+	  },
+  
+	  "keywords": {
+		"patterns": [
+		  {
+			"name": "keyword.control.dragonfragment",
+			"match": "\\b(struct|message|namespace)\\b"
+		  }
+		]
+	  },
+  
+	  "directions": {
+		"patterns": [
+		  {
+			"name": "storage.modifier.direction.dragonfragment",
+			"match": "\\b(c2s|s2c)\\b"
+		  }
+		]
+	  },
+  
+	  "types": {
+		"patterns": [
+		  {
+			"name": "storage.type.primitive.dragonfragment",
+			"match": "\\b(int|int64|bool|string|u8string|double)\\b"
+		  }
+		]
+	  },
+  
+	  "numbers": {
+		"patterns": [
+		  {
+			"name": "constant.numeric.dragonfragment",
+			"match": "\\b\\d+\\b"
+		  }
+		]
+	  },
+  
+	  "fieldTags": {
+		"patterns": [
+		  {
+			"name": "entity.other.attribute-name.tag.dragonfragment",
+			"match": ":(\\d+)"
+		  }
+		]
+	  },
+  
+	  "arrays": {
+		"patterns": [
+		  {
+			"name": "keyword.operator.array.dragonfragment",
+			"match": "\\[\\]"
+		  }
+		]
+	  },
+  
+	  "identifiers": {
+		"patterns": [
+		  {
+			"name": "variable.other.identifier.dragonfragment",
+			"match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+		  }
+		]
+	  }
+	}
+  }
+  

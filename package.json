@@ -1,0 +1,73 @@
+{
+	"name": "uitool-eproto-language",
+	"displayName": "UITool EProto Language",
+	"description": "",
+	"version": "0.0.3",
+	"engines": {
+		"vscode": "^1.107.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"contributes": {
+		"languages": [
+			{
+				"id": "eproto",
+				"aliases": [
+					"UITool EProto",
+					"eproto"
+				],
+				"extensions": [
+					".epr"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "eproto",
+				"scopeName": "source.eproto",
+				"path": "./syntaxes/eproto.tmLanguage.json"
+			}
+		],
+		"commands": [
+			{
+				"command": "eproto.dumpCurrentLineState",
+				"title": "EPR: Dump Current Line State"
+			},
+			{
+				"command": "eproto.initDocument",
+				"title": "EPR: Init EPR Document"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "eproto.dumpCurrentLineState",
+					"when": "editorLangId == 'eproto'"
+				},
+				{
+					"command": "eproto.initDocument",
+					"when": "editorLangId == 'eproto'"
+				}
+			]
+		},
+		"jsonValidation": [
+			{
+				"fileMatch": [
+					"*.epr.json"
+				],
+				"url": "./schema/epr-project-schema.json"
+			}
+		]
+	},
+	"main": "./out/extension.js",
+	"devDependencies": {
+		"@types/vscode": "^1.85.0",
+		"typescript": "^5.3.0"
+	},
+	"scripts": {
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	}
+}

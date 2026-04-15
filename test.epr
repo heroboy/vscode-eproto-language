@@ -1,0 +1,1719 @@
+protoname=DragonFragment;
+protoid=101;
+interfacestyle=stdcsgame;
+serverlanguage=cpp;
+csharpeventstyle=default;
+notWriteDate=1;
+
+message D:142
+{
+
+};
+struct AA
+{
+	int a;
+	short bb :1;
+	int b :2;
+	int adfasfddsaf:1;
+	string a:1;
+	int k:6;
+	msgtype afsjdkf:3;
+	string abs:4[];
+	u8string aaa:5[];
+
+};
+message abc:143
+{
+
+
+};
+
+message adfasfddsaf:141 {
+	int a :1;
+	//dfasdf
+};
+/*afd sadf*/
+/*
+   comment
+*/
+struct KVItem
+{
+	int k:1;
+	int v:2;
+	int aa :3;
+	int bb : 4;
+	int v:7;
+	int c:8;
+	int arr:9[];
+};
+struct V1
+{
+	int a :1;
+	int b :2;
+};
+
+struct A{
+
+};
+
+message SSS1 :140  s2c{
+
+
+
+
+};
+message A :141  s2c{
+
+	int a:1;
+	int b :2;
+	string c :3;
+
+
+};
+
+message A:123 s2c
+{
+	int a:1;
+	short b:2;
+
+}
+
+
+
+
+//聚宝盆的结构。看后面协议引用这个结构的地方。
+struct JBPeng_Result
+{
+	//这个结构体是否有值。为true，后面的值才有效
+	bool hasValue:1 = false;
+	//赢取礼物的价值。可能是-1，表示赢取全部。
+	int winValue:2;
+	//实际赢取礼物的价值
+	int actualWinValue:3;
+	//实际礼物
+	KVItem gifts:4[];
+};
+//服务器刷新一个场景的数据
+//玩家进入会发送3个
+message UpdatePlayerData:1 s2c
+{
+	//1,2,3 三个场景
+	int scene:1;
+	//背包内碎片数据。0-7的id。不是实际ks的礼物id。（在有保底配置的游戏里，id==8是保底碎片）
+	//背包碎片数量<=6，当背包碎片>3个的时候，需要发送整理背包指令，手动选择3个。
+	//否则不能下注
+	//背包内会出现-1表示空位。
+	//背包大小有2种情况，3或6。 3就是正常情况。6表示需要整理。
+	//整理的时候需要bag[0]和bag[3], bag[1]和bag[4]，bag[2]和bat[5]，3组之间二选一的整理。
+	int bag:2[];
+	//新增字段，3或者4。 用于支持解锁额外背包格子。
+	//1.这个字段表示的是当前背包的状态。有可能UpdateExtraBagPlayerData处于锁定状态，但这里是4。
+	//2.在下面BetSuccess中，bagCount始终是最后收到的UpdatePlayerData里的数值。计算背包需要按照这个数值来。
+	//3.上述bag的说明修改为：前bagCount为背包内的道具，后3个为额外的3个碎片。
+	//        所以，当bagCount==3，bag大小为3或6，当6的时候，需要发送整理。
+	//                  当bagCount==4, bag大小为4或7，当7的时候，需要发送整理。
+	int bagCount:9 = 3;
+
+	//是否首次
+	bool first:3;
+
+	//龙晶数量，龙晶数量==3个的时候，需要发送合成龙晶的指令
+	int crystal:4;
+	//龙晶还有多少秒过期
+	int crystalExpireSeconds:5;
+	int todayCrystal:6;
+	//玩转盘用的能量
+	int energy:7;
+	//上一次龙晶合成的礼物id, -1或0表示没有
+	int lastCombineGiftId:8;
+};
+
+//服务器发送，龙晶过期了。需要设置自己的龙晶=0
+//只会在进入服务器的时候检查。在服务器内的时候不会过期。
+message CrystalExpired:2  s2c
+{
+	//哪个场景的。
+	int scene:1;
+};
+
+//当玩家背包碎片>3个，需要手动整理背包才能继续游戏
+//整理背包，看上面关于怎么整理的说明
+message UpdateMyBag:3  c2s
+{
+	int scene:1;
+	// <= 3
+	int bag:2[];
+};
+
+//整理背包成功
+message UpdateMyBagSuccess:4  s2c
+{
+	int scene:1;
+	int bag:2[];
+	//3或者4
+	int bagCount:3;
+};
+
+//整理背包失败
+//明显的参数错误不会回复。例如: scene<=0, bag.length > 3等
+message UpdateMyBagFailed:5  s2c
+{
+	//没有原因
+};
+
+//客户端发送合成龙晶
+message CombineCrystal:6  c2s
+{
+	int scene:1;
+};
+
+//合成成功
+message CombineCrystalSuccess:7  s2c
+{
+	int scene:1;
+	//获得了哪个礼物。（这里的id时ks的礼物id）
+	int giftId:2;
+};
+
+//合成失败
+message CombineCrystalFailed:8  s2c
+{
+
+};
+
+//客户端下注
+message Bet:9  c2s
+{
+	int scene:1;
+	//次数：1，10，100（首次游玩只能count==1）
+	int count:2;
+	//是否加倍
+	bool isDouble:3;
+	//背包整理策略
+	//0 手动整理（只能在count==1的时候选择）,1 价值优先，2后来的优先
+	int bagPolicy:4;
+	/*
+	    开启神龙积分玩法。
+	    当false，则和以前一样正常玩，无论服务器是否开启神龙积分，都不允许掉落神龙积分。
+	    当true，则表示要玩神龙积分模式。（注：当服务器不支持或没在活动期间设置为true，也不会下注失败）
+	    接下来参考BetSuccess中注释，如果支持神龙积分模式。
+	*/
+	//不再被使用，服务器会忽略这个参数了
+	bool _useDragonScore:5 = false;
+
+	//使用“福”的盘数。需要保证，处在福活动中，并且福的数量足够(次数 * 价格 * 是否加倍)。
+	//useFuCount必须<=count
+	int _useFuCount_:6 = 0;
+};
+
+//下注失败
+message BetFailed:10  s2c
+{
+	//明显的参数错误不回复。例如：scene不合法，count<0 , bagPolicy<0 , bagPoly>2等
+	//1 钱不够，2次数不对，3背包策略不对，4需要整理背包，5需要合成龙晶,6. 首次，但是选择了double。
+	//7 useFu>0但是活动已经结束了, 8参数错误useFuCount>count
+	//16 需要选择是否兑换福，17 需要选择增量卡
+	int reason:1;
+};
+
+//表示了一次击破
+struct BetResult
+{
+	//掉落的碎片(碎片id都是[0,7]的数字)
+	char fragments:5[3];
+	//掉落、合成、整理后的背包内碎片
+	//如果是自动整理，则bag大小是3（或者4，解锁格子情况下），如果不是自动整理bag大小是6（或者7，解锁格子情况下）
+	char bag:6[];
+	//奖励类型。[0,24]的数字。
+	//0-23分别是：碎片0 x2，碎片0 x3，碎片0 x4,，碎片1 x2 ... 
+	//上面8种碎片，每种为2,3,4个，一共3*8=24种中奖情况。
+	//24 表示，无组合碎片。
+	char rewardType:7;
+	//当rewardType==24 && fallback==true的时候，触发的是保底碎片。bag和fragments中会出现2个保底碎片用于合成
+	bool fallback:8;
+
+	//宝藏碎片：掉落的宝藏碎片0-8。-1表示没掉落。
+	char dropPuzzlePiece:9;
+	//掉落的精魄，已经是乘以了倍率了。如果精魄满了，则上面dropPuzzlePiece=8，掉落LV3碎片，并且后续精魄变成0.    
+	short dropPuzzleJp:10;
+	//掉落的“福”
+	short _dropFu_:11 = 0;
+
+	int giftId:12;
+	int giftCount:13;
+};
+
+
+
+message BetSuccess:11  s2c
+{
+	//数组长度对应了count
+	BetResult results:1[];
+	//表示掉落的龙晶
+	int crystal:3;
+	//整个结束后，玩家的这个场景数据
+	UpdatePlayerData next:2;
+	//掉落宝藏碎片精魄的倍率1,2,3
+	char dropPuzzleJpMul:4 = 1;
+
+	/*
+		神龙积分模式新增。
+		0 表示正常结算了，和之前一样。
+		1 表示需要进行礼物积分兑换。
+		    这时候，服务器发送BetSuccess只是临时告诉你游戏结果，并没有修改任何玩家数据。
+		    客户端需要发送ExchangeDragonScore选择哪些礼物兑换成神龙积分，服务器才进行最终的结算。
+		    客户端这时候只能发送ExchangeDragonScore，在没有完成兑换之前，发送其它指令Bet,BetSky都会出错。
+		    如果这时候客户端断线重入了，服务器会再次发送这个BetSuccess，提醒你需要ExchangeDragonScore。
+		    如果下注后，实际获得的礼物没有可以兑换的积分，则服务器会直接发送dragonScoreMode=0的BetSuccess。
+	*/
+	//不再被使用，服务器会忽略这个参数
+	int _dragonScoreMode:5 = 0;
+	bool isDouble:6;
+
+	//增量卡：第几局游戏中掉落了. -1表示没掉落。
+	//如果掉落了则要发送ChooseAccCard来选择卡。不选择不能继续进行游戏。
+	int dropAccCardIndex:7 = -1;
+	//今天的第几张
+	int dropAccCardTodayCount:10 = 0;
+	//第几局使用了当前的增量卡
+	int useAccCardIndex:8 = -1;
+	//具体使用的卡的giftId
+	int useAccCard:9 = 0;
+
+	//实际加的排行榜分数
+	int realAddBillboardScore:11 = 0;
+	//加的排行榜统计分数，用于计算每日限制，不包含随机部分的。
+	int addBillboardDayScore:12=0;
+
+	//“福”：类似于上面的_dragonScoreMode，1的时候，表示需要发送Fu_ExchnageGiftToFu，才能完成整个下注。
+	//注：和DragonScore不同，断线或逃跑之后，会自动结算。不用处理断线逃跑的问题。
+	int _fuMode_:13 = 0;
+
+	int _useFuCount_:14 = 0;
+
+	//排行榜4活动的分数。如果当前不在活动期间则数组长度是0.
+	//否则内容为 [加的基础分，随机分，幸运分，连续幸运分]
+	int rank4Scores:15[];
+	//聚宝盆玩法的结果
+	JBPeng_Result jbp:16;
+
+	//同上rank4, 但是是3个数字    [加的基础分，随机分，幸运分]    
+	int rank5Scores:17[];
+};
+
+struct _DragonScoreExchangeItem
+{
+	int giftId:1;
+	int count:2;
+};
+
+//神龙积分模式中，客户端发送这个选择哪些礼物进行兑换。
+message _ExchangeDragonScore:45  c2s
+{
+	//要兑换哪些礼物变为神龙积分。
+	_DragonScoreExchangeItem items:1[];
+};
+
+message _ExchangeDragonScoreSuccess:46  s2c
+{
+	//原BetSuccess中的内容，表示实际游戏的结果
+	BetSuccess bs:1;
+	//获得了多少神龙积分
+	int getDragonScore:2;
+	//获得了多少神龙降临礼物
+	int getGiftCount:3;
+	//最终你的神龙积分是多少
+	int nowDragonScore:4;
+};
+
+message _ExchangeDragonScoreFailed:47  s2c
+{
+	//1 现在不能发送ExchangeDragonScore，2 参数错误，items中有非法的giftId或者count太多了或者giftId重复了。
+	int reason:1;
+};
+
+struct _DragonScoreHistoryItem
+{
+	string date:1;
+	//gifts 中 用了count个礼物id换取了score个神龙积分
+	//getScore 表示增加了多少分，redeemGiftCount表示增加的多少礼物并扣了相应的分数，nowScore最终神龙积分
+	//注：如果这局游戏产生了神龙积分，则RankListItem的chipex中会有个类似gifts的字段。
+	//格式1:  {type:"getdragonscore" ,gifts:[{id:123,count:1,score:10}],nowScore:123,redeemGiftCount:1,getScore:1111}
+	//其它礼物兑换，活动结束后，首次登录房间自动兑换的礼物。myScore兑换前我的积分。gifts实际兑换的礼物
+	//格式2：{type:"dragonscore_finalredeem",gifts:[{id:123,count:1,score:10}}],myScore:123}
+	string chipex:2;
+};
+
+
+message _QueryDragonScoreHistory:48  c2s
+{
+
+};
+
+message _QueryDragonScoreHistorySuccess:49  s2c
+{
+	_DragonScoreHistoryItem items:1[];     
+};
+message _QueryDragonScoreHistoryFailed:50  s2c
+{
+	int reason:1;
+};
+
+
+//排行榜的一条
+struct RankListItem
+{
+	int userid:1;
+	int value:2;   //总价值
+	string date:3;//yyyy-mm-dd hh:mm:ss
+	string chipex:4;//投注明细
+};
+
+//查询我的排行榜
+message QueryMyRankList:12 c2s
+{
+
+};
+
+message QueryMyRankListSuccess:13 s2c
+{
+	RankListItem items:1[];
+};
+message QueryMyRankListFailed:14 s2c
+{
+	int reason:1;
+};
+//查询直播间排行榜
+message QueryLiveRoomRankList:15 c2s
+{
+
+};
+
+message QueryLiveRoomRankListSuccess:16 s2c
+{
+	RankListItem items:1[];
+};
+message QueryLiveRoomRankListFailed:17 s2c
+{
+	int reason:1;
+};
+
+//转转盘
+message Roll:18  c2s
+{
+	//场景
+	int scene:2;
+	//想要转的挡位。1，2，3
+	//挡位其实没得选择，和你的当前能量有关。如果填错，会失败的。
+	int level:1;
+};
+
+message RollSuccess:19  s2c
+{
+	int scene:2;
+	int level:1;
+	//选中了哪一个0-7，序号
+	int rollIndex:3;
+	//中的礼物id
+	int rollGiftId:4;
+	//转完后你剩下的能量。不发next了，只有能量是有变化的。
+	int nextEnergy:5;
+};
+
+message RollFailed:20  s2c
+{
+	//明显程序写错的失败不回复这个协议。例如scene写错了。
+	//原因. 1能量不够，2没开通
+	int reason:1;
+};
+
+
+//系统公告
+message GiftMessage:21 s2c
+{
+	//可能是假数据，userid=0
+	int userid:5;
+	string nickname:6;
+	//类型：0击破，1合成龙晶，2转盘，3藏宝拼图小奖，4藏宝拼图大奖，5兑换神龙降临count个
+	//          6表示使用增量卡，>1000中超大奖礼物，这时候只有items有意义。
+	// 其中》1000的时候，从1000开始按顺序是：常规击破、转盘、拼图、神龙降临、排行榜奖励、增量卡生效、每日福利
+
+
+	//对于藏宝拼图，下面的count应该没意义。
+	//对于5，下面只有count有意义，表示神龙降临的个数
+	//对于6，scene有用，items中有一项，其中v已经加1了
+	int type:1;
+	//击破次数
+	int count:2;
+	//场景1，2，3
+	int scene:3;
+	//获得奖励。其中，k是ks的礼物id，v是数量
+	KVItem items:4[];
+
+	int id:7;
+};
+
+
+struct RollHistoryItem:22 
+{
+	//1,2,3
+	int scene:1;
+	//2024-07-05 15:47:46
+	string date:2;
+	//{"type":"roll","scene":1,"level":2,"giftIndex":5,"giftId":123445}
+	string chipex:3;
+};
+
+//同RollHistoryItem
+struct CombineHistoryItem
+{
+	int scene:1;
+	string date:2;
+	string chipex:3;
+};
+
+message QueryMyRollHistory:23  c2s
+{
+
+};
+
+message QueryMyRollHistorySuccess:24  s2c
+{
+	RollHistoryItem items:1[];
+};
+
+message QueryMyRollHistoryFailed:25  s2c
+{
+	int reason:1;
+};
+
+message QueryMyCombineHistory:26  c2s
+{
+
+};
+message QueryMyCombineHistorySuccess:27  s2c
+{
+	CombineHistoryItem items:1[];
+};
+
+message QueryMyCombineHistoryFailed:28  s2c
+{
+	int reason:1;
+};
+//一些配置，进房间时发
+message InitConfig:29  s2c
+{
+	//场景123的能量等级
+	int rollLevelEnergy1:1[];
+	int rollLevelEnergy2:2[];
+	int rollLevelEnergy3:3[];
+
+
+	//宝藏碎片：下面4个是时间。格式严格按照："2024/8/28 15:21:0" 或者 空字符串表示服务器完全不支持宝藏碎片玩法。
+	//开始时间
+	string startPuzzleGameTime:4;
+	//结束掉落时间
+	string endDropPuzzleGameTime:5;
+	//结束兑换时间
+	string endRedeemPuzzleGameTime:6;
+	//服务器当前时间。防止客户端时间不准或时区问题。
+	string serverTime:7;
+	//自定义配置
+	string userSetting:22;
+};
+
+//宝藏碎片：服务器更新玩家宝藏碎片数据。
+//如果，服务器不支持宝藏碎片，或者时间已经超过了兑换时间，则永远不会收到这条消息。
+//如果支持，玩家进入的时候会收到3条，更新3个场景的消息
+//如果支持，下注成功BetSuccess，会收到更新当前的数据。
+//如果支持，兑换碎片成功，会收到更新当前的数据。
+message UpdatePuzzlePlayerData:30 s2c
+{
+	//1-3，哪个场景
+	char scene:1;
+	//9个碎片的数量。6个lv1碎片，2个lv2碎片，1个lv3碎片
+	int pieces:2[9];
+	//精魄
+	int jp:3;
+	//100%的精魄
+	int jpTotal:4;
+
+	//此场景下，累计的兑换次数
+	int smallRedeemCount:5;
+	int bigRedeemCount:6;
+};
+
+//藏宝碎片：兑换小奖
+message RedeemSmallPuzzle:31  c2s
+{
+	char scene:1;
+};
+
+message RedeemSmallPuzzleSuccess:32  s2c
+{
+	char scene:2;
+	int giftId:1;
+};
+
+message RedeemSmallPuzzleFailed:33  s2c
+{
+	char scene:1;
+	//原因：1 不支持或已经超过了兑换时间。2 碎片不足
+	int reason:2;
+};
+
+message RedeemBigPuzzle:34  c2s
+{
+	char scene:1;
+};
+//藏宝碎片：兑换大奖
+message RedeemBigPuzzleSuccess:35 s2c
+{
+	char scene:1;
+	int giftId:2;
+};
+message RedeemBigPuzzleFailed:36  s2c
+{
+	char scene:1;
+	//原因：1 不支持或已经超过了兑换时间。2 碎片不足
+	int reason:2;
+};
+
+struct PuzzleRedeemHistoryItem
+{
+	char scene:3;//场景
+	string date:1;//日期
+	string chipex:2;//json格式的明细
+};
+
+//查询我的兑换历史
+message QueryMyPuzzleRedeemHistory:37 c2s
+{
+
+};
+
+message QueryMyPuzzleRedeemHistorySuccess:38 s2c
+{
+	PuzzleRedeemHistoryItem data:1[];
+};
+
+message QueryMyPuzzleRedeemHistoryFailed:39  s2c
+{
+
+};
+
+//通天域免费抽奖
+//回复BetFailed 或 BetSuccess
+//错误码，10不支持，11 10局打完了，12，兑换过了，活动对你结束了。
+message BetSky:40  c2s
+{
+	int scene:1;
+};
+
+
+struct SkyInfoGift
+{
+	//giftId和count可能是0，表示是空的，需要特殊处理
+	int giftId:2;
+	int count:3;
+};
+
+
+//更新玩家通天域信息
+//只要服务器支持，玩家进入或数据发生变化时就会发送。
+message UpdateSkyInfo:41  s2c
+{
+	int scene:1;
+	//已经玩了几局
+	int playCount:2;
+	//已经兑换了几局. 因为只能兑换一次，所以>0表示活动对你而言已经结束了。
+	int redeemCount:3;
+	//当前可以兑换的奖励。没兑换之前长度==playCount， 兑换后为空
+	SkyInfoGift gifts:4[];
+	//总共多少局
+	int totalCount:5;
+	//当playCount == totalCount时，表示剩余多少秒的兑换时间
+	int leftTimeSeconds:6;
+	//新增，玩家主动跳过不玩了。2024年11月5日
+	bool skiped:7;
+};
+
+//兑换通天域奖励
+//兑换的历史记录会放在上面的combinehistory中，会有个特殊的type:"redeembetsky"
+message RedeemBetSky:42  c2s
+{
+	int scene:1;
+};
+
+message RedeemBetSkyFailed:43  s2c
+{
+	//1 不支持，2已经兑换过了, 3超时了，4没玩过或奖励为空
+	//5 支付道具不够, 6送的钱太多了，不能再送了
+	int reason:1;
+};
+
+message RedeemBetSkySuccess:44  s2c
+{
+	//获得的奖励
+	SkyInfoGift gifts:1[];
+};
+
+//神龙积分活动的配置。如果服务器配置的这个活动，则会发送，在玩家进入房间的时候。
+message _InitDragonScoreConfig:51  s2c
+{
+	//开始/结束/服务器时间。格式参考上面。
+	string startTime:1;
+	string endTime:2;
+	string serverTime:3;
+};
+
+//更新玩家神龙降临相关数据。服务器配置了神龙降临，并且神龙降临活动已经开始，则会发送。在玩家进入房间和数值发生变化的时候会发送。
+message _UpdatePlayerDragonScore:52  s2c
+{
+	//当前积分
+	int dragonScore:1;
+	//累计获得的神龙降临礼物数量
+	int dragonScoreGiftCount:2;
+};
+
+
+//下面开始的是排行榜相关的协议
+
+//一条排行榜的条目
+struct BillboardActivityRecordItem
+{
+	int userid:1;
+	u8string nickname:2;
+	u8string faceurl:3;
+	int64 score:4;
+	//对于周榜，今日是否达到上限 。
+	bool  reachLimit:5;
+};
+
+//请求排行榜。稍微缓存一下，不要太频繁了。
+message QueryBillboardActivityRankList:53  c2s
+{
+	//哪个排行榜，1或者2
+	int billboardType:1;
+	//哪一天。0 今天，-1 昨天。只能是这两个数字。
+	//如果是周榜，0是本周，-1上周。当返回的周一是活动日期的话，则能成功返回数据。
+	int day:2;
+};
+//返回排行榜
+message RetBillboardActivityRankList:54  s2c
+{
+	//0表示没错。非0表示出错，下面数据都是无效的
+	//1 参数错误，2 日期非活动日期。3 其它意外情况
+	int err:1;
+	int billboardType:2;
+	//实际的年月日，示例：20241010。
+	//如果是周榜：则intDay是对应的周一的日期
+	int intDay:3;
+	//实际排行榜数据。已经排好序。
+	BillboardActivityRecordItem items:4[];
+};
+
+//查询我的排行榜积分。
+//稍微缓存一下，当没有玩过游戏的时候，如果反复看，尽量不要重复请求。
+message QueryMyBillboardActivityScore:55  c2s
+{
+	int billboardType:1;
+	//0 今天，-1昨天
+	//如果是周榜，0是本周，-1上周。当返回的周一是活动日期的话，则能成功返回数据。
+	int day:2;
+};
+
+message RetMyBillboardActivityScore:56  s2c
+{
+	int billboardType:2;
+	//如果是周榜：则intDay是对应的周一的日期
+	int intDay:3 = 0;
+	//-1表示出错了。
+	int64 score:1;
+};
+
+//初始化排行榜活动的配置
+//一进来就会发。如果没有收到就说明没有配置。
+message InitBillboardActivityConfig:57  s2c
+{
+	//开始日期20241014。0表示没配置
+	int intStartDay:1;
+	//结束日期20241014
+	int intEndDay:2;
+
+	//排行榜2的开始结束日期。0表示没配置
+	int intStartDay2:3;
+	int intEndDay2:4;
+
+	//榜单类型，默认0日榜，1周榜
+	//对于周榜，对应的返回日期都是星期一
+	int billboardDayType1:5;
+	int billboardDayType2:6;
+
+	//排行榜3的配置。0表示没配置
+	int intStartDay3:7;
+	int intEndDay3:8;
+};
+
+//客户端兑换排行榜的奖励
+message RedeemBillboardActivityGift:58  c2s
+{
+	//哪个榜。支持领取周榜礼物了
+	int billboardType:1;
+	//哪天。20241009。如果领取的是周榜intDay需要是这一周的周1的日期。
+	int intDay:2;
+	//要领取日榜还是周榜礼物。0日榜，1周榜。
+	//虽然，客户端必须指定要领取周榜的还是日榜的。但是，如果和服务器当前配置不符，还是会出错禁止领取的。
+	int dayType:3 = 0;
+};
+
+//排行榜领奖回复
+message RetRedeemBillboardActivityGift:59  s2c
+{
+	//0 成功。非0 出错。出错的话，下面的变量都没有意义。
+	//1 服务器繁忙中。(RedeemBillboardActivityGift不能反复发送，需等待Ret回复后才能再次发送)
+	//2 参数错误。3 数据库或其它网络错误。4 没有上榜  5 已经领过奖
+	//6 周榜的一些错误：intDay出错，非周1；dayType错误和服务器配置不符。
+	int err:1;
+
+	int billboardType:2;
+	//如果是周榜，这个日期是周1的日期
+	int intDay:3;
+	//中奖礼物id
+	int giftId:4;
+	//中奖礼物数量
+	int giftCount:5;
+	//排名。从1开始。
+	int rank:6;
+	//返回是日榜0，还是周榜1
+	int dayType:7;
+};
+
+//开始增量卡活动的协议
+
+//增量卡活动配置。服务器配置了就会发，无论是否在活动期间。
+message InitAccCardConfig:60  s2c
+{
+	//开始结束时间，格式：20241023141153  （年月日时分秒）
+	int64 intStartTime:1;
+	int64 intEndTime:2;
+};
+
+//更新玩家增量卡的信息。
+//活动期间，玩家进入就会发
+//一局游戏结束，增量卡用掉了会发
+//成功选择了增量卡，会发。
+//卡超时的时候，服务器不会发，客户端自动消失即可。
+message UpdatePlayerAccCardInfo:61  s2c
+{
+	byte scene:1;
+	//0 表示没有卡。否则就是这张卡对应的礼物id
+	int card:2;
+	//多少秒后超时失效。<0的时候，即使card!=0也表示没有卡，失效了。
+	int expire:3;
+};
+
+//一局游戏结束后，如果掉落了增量卡，需要发送来选择实际想要的卡
+//成功后，回复UpdatePlayerAccCardInfo
+//失败，回复ChooseAccCardFailed;
+message ChooseAccCard:62  c2s
+{
+	int scene:1;
+	int card:2;
+};
+
+message ChooseAccCardFailed:63  s2c
+{
+	//1 参数错误，2 时机错误，3 卡牌错误
+	int reason:1;
+};
+
+//断线重入时，收到这个协议，表示需要选择要的增量卡
+message YouShouldChooseAccCard:64  s2c
+{
+	int scene:1;
+	//获得第几张
+	int dropAccCardTodayCount:2;
+};
+
+
+//客户端空闲的时候，向服务器请求最近的跑马灯。
+message ReqRecentGiftMessage:65  c2s
+{
+
+};
+
+//最近的10条，跑马灯
+message RetRecentGiftMessage:66  s2c
+{
+	GiftMessage messages:1[];
+};
+
+//跳过betsky，主动不玩了
+//成功后UpdateSkyInfo, 失败发送SkipBetSkyFailed
+message SkipBetSky:67  c2s
+{
+	int scene:1;
+};
+
+message SkipBetSkyFailed:68  s2c
+{
+	//1 参数错(scene 不合法)，2 不支持betsky玩法，3 已经结束，4 已经skip，
+	int reason:1;
+};
+
+//更新玩家周榜今天的剩余积分上限。
+//玩家进入的时候，如果是周榜，并且周榜设置的每日上限，则会发送。
+//当下注的时候，更新排行榜，导致这个值发生变化的时候会发送。
+message UpdatePlayerWeekBillboardLimitScore:69  s2c
+{
+	//今天的日期（不是这周的周1日期）
+	//日期发生变化的时候，不会发送，但是下注的时候会发送，这时候就是新的日期。
+	int intToday:1;
+	//1或2，哪个榜
+	int billboardType:2;
+	//剩余积分。可能会小于0，表示爆了，就当0处理
+	//int leftScore:3;
+	//配置中的每日限制分数
+	int limitScore:4;
+
+	//上面leftScore不发了，用这个能计算出一切
+	//记录了从周1到周日7天每天实际增加积分的量。
+	//intToday为周几，dayScore就发几个。并不是一定就发7个。因为日期还没到后面其实都是0.
+	int dayScore:5[];
+	//当下注时，导致发生变化发送这个协议的时候。有可能是true。表示这次使得今天封顶了。
+	bool isHitLimit:6 = false;
+};
+
+
+//下面开始奖券活动的协议部分
+/*
+协议共同的部分：
+期数day用int64表示，例如: 2024121200，分别是“年月日时”，最后两位一定是00或12，表示一天的前一期或后一期
+type=0或1，表示2个不同的榜单。
+所有操作，因为涉及另一个服务器，所以必须等待完成后才能发起另一个请求。否则统一回复555
+参数错误，回复888
+服务器异常，回复999
+*/
+
+//只要配置了，无论是否在活动期间都会发送
+message TA_InitConfig:79  s2c
+{
+	//开始期数
+	int64 startDay:1;
+	//结束期数
+	int64 endDay:2;
+	//serverTime在InitConfig里
+};
+
+
+//客户端查询自己当前的奖券
+message TA_QueryMyTicket:70  c2s
+{
+	int type:1;
+};
+
+message TA_RetQueryMyTicket:71  s2c
+{
+	//0 成功，下面成员才有意义。1 当前非活动期间 999 服务器内部错误
+	int err:1;
+	int64 day:2;       //期数
+	int type:3;          //榜单
+	int ticket:4;        //当前靠下注获得的奖券
+	int prevTicket:5; //从上期转结的奖券
+};
+
+//服务器主动推送当前奖券
+//一般发生在，下注获得奖券后
+message TA_UpdateTicket:72  s2c
+{
+	int64 day:1;
+	int type:2;
+	int ticket:3;
+	int prevTicket:4;
+};
+
+//转结我的上一期奖券
+message TA_TransMyTicket:73  c2s
+{
+	int type:1;
+};
+
+message TA_RetTransMyTicket:74  s2c
+{
+	//0 成功。1 非活动期间，2 当前第一期，没有上一期
+	int err:6;
+	int64 day:1;
+	int type:2;
+	int ticket:3;
+	int prevTicket:4; //转结后奖券
+	int oldTicket:5;   //上一期奖券（没有除以系数）
+};
+
+//兑换我的奖品
+message TA_RedeemRewards:75  c2s
+{
+	//任意期都能兑换，只要在活动范围内
+	int64 day:1;
+	int type:2;
+};
+
+struct TA_MyGift
+{
+	//奖品序号，从0开始
+	int index:1;
+	int giftId:2;
+	int giftCount:3;
+};
+message TA_RetRedeemRewards:76  s2c
+{
+	//0 成功，1 非活动日期。2 没有获奖，3 已经兑换
+	int err:1;
+	int64 day:2;
+	int type:3;
+	TA_MyGift gifts:4[];
+
+	int userid:5;
+	u8string nickname:6;
+	string faceurl:7;
+};
+
+//查询奖励榜单
+message TA_QueryRewards:77  c2s
+{
+	int64 day:1;
+	int type:2;
+};
+
+struct TA_Reward
+{
+	//奖品序号，从0开始。
+	int index:1;
+	// <=0 表示是机器人
+	int userid:2;
+	u8string nickname:3;
+	u8string faceurl:4;
+	//json字符串，表示礼物内容 {index,giftId,giftCount,giftValue,giftName}
+	u8string giftContent:5;
+	//是否已经领取
+	int redeemed:6;
+	//中奖的这一期，这个玩家的奖券
+	int totalTicket:7;
+};
+
+message TA_RetQueryRewards:78  s2c
+{
+	//0成功，1非活动范围，2只能查过去的。
+	int err:1;
+	int64 day:2;
+	int type:3;
+	TA_Reward rewards:4[];
+};
+
+//服务器更新获得奖券的进度。
+//进服务器的时候，如果当前是活动时间，会发。
+//下注的时候，如果当前是活动时间，进度改变了，会发。
+message TA_UpdateTicketProgress:80  s2c
+{
+	int64 day:1;
+	//场景1，2，3
+	int scene:2;
+	//当前累计下注次数。double的话每次+2
+	int round:3;
+	//下一次获得奖券的次数
+	int nextRound:4;
+};
+
+//福相关的内容，虽然上面也有一些
+
+
+//参考：BetSuccess中的字段
+//选择礼物兑换成福
+message _Fu_ExchangeGiftToFu_:81  c2s
+{
+	//k是礼物id，v是数量。必须是掉落里的礼物，数量不能超过。
+	//k必须合并，不能在items中重复出现。v必须>0
+	KVItem items:1[];
+};
+
+message _Fu_ExchangeGiftToFu_Failed_:82  s2c
+{
+	//1 现在不能发。2 参数错误
+	int reason:1;
+};
+
+message _Fu_ExchangeGiftToFu_Success_:83  s2c
+{
+	BetSuccess bs:1;
+	//总共兑换了多少的福。
+	int exchangedFu:2;
+};
+
+//客户端请求，把“福”兑换成礼物
+//注：之前版本有个拼写错误，这里改了。
+message _Fu_ExchangeFuToGift_:84  c2s
+{
+	//格式同上面的
+	KVItem items:1[];
+};
+message _Fu_ExchangeFuToGift_Failed_:85  s2c
+{
+	//1. 参数错误。2 礼物id非法。3 不在活动中，4 福不够
+	int reason:1;
+};
+
+//注：这个协议除了回复上面的请求之外，还会自动发送
+message _Fu_ExchangeFuToGift_Success_:86 s2c
+{
+	//这个参数表示这个协议发的时机。
+	//0 客户端主动发Fu_ExchangeFuToGift后回复用。
+	//1 倒计时40分钟结束后，自动兑换发送
+	//2 登录的时候超过40分钟或活动结束，自动兑换发送
+	int mode:1;
+	//实际兑换的内容
+	KVItem items:2[];
+	//总共用了多少福
+	int totalUseFu:3;
+};
+
+//服务器更新倒计时
+//玩家进入的时候发送、倒计时结束的时候发送
+message _Fu_UpdateFuTimeout_:87  s2c
+{
+	//倒计时秒数
+	int timeoutSeconds:1;
+};
+
+message _Fu_InitConfig_:88  s2c
+{
+	//格式: 1999-1-1 23:59:59，没有额外空格，没有前置0
+	string startTime:1;
+	//在这个时间前，下注可以用“福”，下注后，也可以选择是否兑换礼物到福
+	string endTime1:2;
+	//在这个时间前可以兑换福到礼物。
+	string endTime2:3;
+};
+
+//=============开始排行榜3==================
+struct BillboardActivityRecordItem3
+{
+	int userid:1;
+	u8string nickname:2;
+	u8string faceurl:3;
+	//固定分数部分
+	int fixScore:4;
+	//随机分数部分
+	int randScore:5;
+};
+
+//查询排行榜3（请求必须顺序请求，否则可能返回服务器繁忙）
+message QueryBillboardActivityRankList3:89  c2s
+{
+	//0 当前，-1 昨天，-2前天。
+	int day:1;
+};
+
+message RetBillboardActivityRankList3:90  s2c
+{
+	//0 没错。同：RetBillboardActivityRankList的返回值
+	int err:1;
+	//示例20241010
+	int intDay:2;
+	//实际排行榜数据
+	BillboardActivityRecordItem3 items:3[];
+};
+
+//查询我的排行榜分数（请求必须顺序请求，否则可能返回服务器繁忙）
+message QueryMyBillboardActivityScore3:91  c2s
+{
+	//0 当天， -1昨天， -2前天
+	int day:1;
+};
+
+message RetMyBillboardActivityScore3:92  s2c
+{
+	int intDay:1;
+	//-1 表示出错了
+	int fixScore:2;
+	int randScore:3;
+};
+
+//触发了达到5000获得2000随机随机分的事件
+//如果触发，在下注成功收到成功下注之后，大于几十或几百ms后，再发送。
+//message GetBillboardActivity3_ExtraScore:93  s2c
+//{
+//固定配置：2000
+//int extraRandScore:1;
+//};
+
+//下注成功后，成功给排行榜3加了分数
+message SuccessAddBillboardActivityScore3:93  s2c
+{
+	//加多少分
+	int addFixScore:1;
+	//addRandScore不包含达到5000额外+2000的分数
+	int addRandScore:2;
+	//加完后，现在的分数
+	int nowFixScore:3;
+	int nowRandScore:4;
+	//如果这次触发了+2000随机分，则是2000，否则是0
+	int addExtraRandScore:5;
+};
+
+////////////////////////下面开始所有额外背包的数据/////////////////////////////////////
+
+//更新玩家的额外背包相关的数据
+//服务器发送时机：进房间、重入、服务器日期发生变化，一局游戏后。
+//在UpdatePlayerData之后发送
+//状态0表示，服务器没有配置，或者已经超出了活动时间范围。
+//状态0一般不会发送。但是，在服务器日期发生变化，并且一局游戏后，
+//如果活动结束后。会发送状态0，告诉客户端，状态变化了。然后，还可能会发送一次UpdatePlayerData，更新你最新的背包状态
+
+message UpdateExtraBagPlayerData:94 s2c
+{
+	//场景：1,2,3
+	byte scene:1;
+	//状态：0 无效状态(没到活动时间)
+	//          1 正在解锁今天         
+	//          2 正在解锁明天
+	//          3 已经解锁明天的了
+	//          4 试玩阶段
+	byte status:2;
+	//在当前状态累计的游戏局数。只有在状态1和2的时候，这个数字是有意义的。
+	int gameCount:3;
+};
+
+//服务器提示你，应该整理背包。这时候应该发送UpdateBag整理背包，否则不能继续下注。
+//服务器可能发送的时机：
+//          1. 进房间的时候。
+//          2. 重入的时候
+//          3. 一局结束后。
+//发送条件：
+//          1. 一局游戏结束后，玩家需要整理选择碎片是否要保留到背包中。（之前也有这种情况，但是不发协议，客户端主动判断。现在服务器主动提示你）
+//          2. 当前背包需要锁定，bagCount需要从4变成3
+//          3. 同时发生1和2
+/* 一局下注后流程：
+	     1. 发送BetSuccess
+	     2. 如果当前时间在活动中，则发送UpdateExtraBagPlayerData。
+		 如果当前时间不在活动中，但是之前还在活动中，则发送UpdateExtraBagPlayerData(status = 0)
+	     3. 根据当前额外背包属性，和当前实际背包内容，服务器自动整理背包。有两种情况：
+		 a. 解锁了格子，在第四个位置插入-1. 例如：[1,2,3] => [1,2,3,-1] 或者 [1,2,3,4,5,6] => [1,2,3,-1,4,5,6]
+		 b. 活动结束，静默锁定格子（直接放弃了额外格子的碎片，玩家没机会选择）。例如：[1,2,3,4]=>[1,2,3] 或者 [1,2,3,4,5,6,7]=>[1,2,3,5,6,7]
+		 当出现了自动整理背包，则服务器会发送UpdatePlayerData，告诉客户端背包内容变了。
+	     4. 经过以上步骤后，如果还是出现了需要整理背包的情况，则会发送YouShouldArrangeBag。
+    进房间或重入的协议发送顺序：
+	     1. UpdatePlayerData(必定发送)
+	     2. UpdateExtraBagPlayerData(必定发送)
+	     3. YouShouldArrangeBag(可能发送)
+     关于试玩模式：
+	     如果配置了试玩模式，
+	     1. 可能之前玩家背包还是3格，已进入房间自动扩充变成4格（收到的首个UpdatePlayerData的bagcount=4）.
+	     2. 玩家在下完注的时候，会出现4->1的状态。这时候，会出现和其它锁定时候的情况一下，需要客户端整理背包。
+*/
+message YouShouldArrangeBag:95  s2c
+{
+	int scene:4;
+	//当前背包状态，为bagCount或bagCount+3个
+	int bag:1[];
+	//当前背包大小3或4。
+	int bagCount:2; 
+	//新的背包大小3或4。只有背包数量从4->3的锁定时刻，newCount才和bagCount不同。
+	//当解锁背包的时候，由服务器主动扩充背包，并主动发送UpdatePlayerData。
+	int newCount:3;
+};
+
+
+//下面开始拼图碎片的协议
+//服务器有配置，并在活动时间范围内，就会发送
+//这个协议有两种形式：type=0, type=1
+//type = 0 : 玩家进入房间时发送。这时候newScores必定是空的。
+//type = 1：玩家下注后发送（如果这次下注获得了拼图碎片）。scores为下注前的碎片随机分。newScores为这次获得的。
+//注：服务器时间改变的时候，不会主动发送更新。可能出现情况：服务器配置活动开始时间=1号，服务器当前日期10号。
+//       玩家进入房间，收到的intday=10号。过了段时间，服务器日期变成11号，玩家下注。这时候玩家收到的是intday=11号的数据。
+message Puzzle2_UpdatePlayerData:96  s2c
+{
+	//类型：0初始化时发送。1下注后更新时发送
+	byte type:2;
+	//赛季。为以活动开始日期为边界的每10天。
+	int intDay:1;
+	//玩家当前的每次获得碎片的随机分。数组长度表示已经获得碎片数量。
+	int scores:3[];
+	//如果type=1的时候，表示这次下注获得的碎片数量和随机分。
+	int newScores:4[];
+};
+
+//拼图碎片的配置
+//服务器有配置就会发送。
+message Puzzle2_InitConfig:97  s2c
+{
+	//带时间的开始结束时间。
+	int64 startDay:1;
+	int64 endDay:2;
+};
+
+//客户端请求，拼图活动排行榜
+message Puzzle2_QueryRankList:98  c2s
+{
+	//哪一期，必须是有效的期数。
+	int day:1;
+};
+
+struct Puzzle2_RankListItem
+{
+	int userid:1;
+	u8string nickname:2;
+	u8string faceurl:3;
+	int score:4;
+};
+
+message Puzzle2_RetRankList:99  s2c
+{
+	//0成功，1服务器繁忙（和puzzle2有关的请求，同时只能有一个），2活动未配置，3非法的day参数，4服务器错误
+	int err:1;
+	int day:3;
+	Puzzle2_RankListItem data:2[];
+};
+
+//当客户端收到邮件后，兑换奖励
+message Puzzle2_RedeemGift:100  c2s
+{
+	//哪一期
+	int day:1;
+};
+
+message Puzzle2_RetRedeemGift:101  s2c
+{
+	//0成功，1服务器繁忙，2活动未配置，3非法day参数。4未中奖，5已经兑换，6 服务器错误
+	int err:1;
+	int giftId:2;
+	int count:3;
+};
+
+//当某玩家获得了全部的碎片，群发提醒
+message Puzzle2_PlayerGetAllPuzzle:102  s2c
+{
+	int userid:1;
+	u8string nickname:2;
+};
+
+
+
+/*
+下面开始新游戏的玩法。
+roundId表示法：202505120001，表示为2025年5月12日的第1分钟。后4位为这一天的第X分钟（从0开始，一天是1440分钟）。
+jpRoundId：精魄和背包对应的局数。40分钟为一局，roundId是40的倍数。到了时间，自动兑换。
+		  jpRoundId=0这一轮 在 40分触发自动兑换，jpRoundId=40在80分，以此类推。
+diamondRoundId: 宝石对应的局数。2分钟一局，roundId是2的倍数。到了时间，自动回收。
+注：diamondRoundId=38 (以及40*k-2的那一轮)产生的背包礼物，会在再下一次jpRoundId=40这一轮进行兑换。
+
+
+玩家进入房间收到的协议顺序：
+  1. N_UpdatePlayerData
+  2. N_UpdatePlayerSceneData 3个
+  3. 如果diamondRoundId过期了，则回收N_CollectDiamond
+  4. 如果jpRoundId过期了，则兑换N_RedeemJpGift
+
+
+*/
+
+//进房间或断线重入的时候，服务器发送
+message N_UpdatePlayerData:103  s2c
+{
+	//局数
+	int64 jpRoundId:1;
+	//精魄
+	int jp:2;
+	//我的背包
+	//KVItem bag:3[];
+	//服务器的时间戳（秒）
+	int64 serverNow:4;
+};
+
+//进房间或断线重入的时候，服务器发送
+message N_UpdatePlayerSceneData:104  s2c
+{
+	//场景 1,2,3
+	byte scene:1;
+	int64 diamondRoundId:2;
+	//对应8种宝石的数量
+	int diamond:3[8];
+};
+
+//服务器回收: 宝石变成KS的礼物
+//客户端需要自动更新自己宝石和背包里物品的数量
+message N_CollectDiamond:105  s2c
+{
+	//触发方式：0 进房间，1玩家手动，2服务器自动(2分钟轮)
+	byte type:1;
+	//场景 1 2 3
+	byte scene:2;
+	int64 diamondRoundId:3;
+	//你当前用于兑换的宝石数量
+	int diamond:4[8];
+	//对应8颗宝石的回收方案。1颗宝石兑换成“v”个礼物id “k” 
+	KVItem schema:5[8];
+	//如果是手动触发，roundId不变。否则，会变成新的roundId
+	int64 newRoundId:6;
+	//现在，回收方案是每个宝石会兑换成多少精魄
+	//int jpSchema:7[8];
+	//实际获得的ks礼物
+	KVItem ksGifts:9[];
+};
+
+//服务器兑换：精魄和背包里的东西变成实际ks礼物
+//客户端需要自动清空自己的背包和精魄。
+//2025年6月20日：协议改名保留，但是服务器不再发送这个协议了
+message deperated_N_RedeemJpGift:106  s2c
+{
+	//触发方式：0 进房间，1玩家手动，2服务器自动(40分钟轮)
+	byte type:1;
+	int64 jpRoundId:2;
+	//当前精魄
+	int jp:3;
+	//当前背包
+	//KVItem bag:4[];
+	//兑换后的实际ks礼物
+	KVItem gifts:5[];
+	//如果是手动触发，roundId不变。否则，会变成新的roundId
+	int64 newRoundId:6;
+};
+
+//客户端击破
+//客户端需要主动根据自己精魄和礼物，计算出哪几次用精魄哪几次用礼物
+message N_Bet:107  c2s
+{
+	//场景1，2，3
+	byte scene:1;
+	//用精魄击破次数，2025年6月20日必须是0
+	int jpCount:2;
+	//用礼物击破次数
+	int giftCount:3;
+};
+
+message N_BetResult:108  s2c
+{
+	//0 成功。1 jp不够，2 礼物不够，3 参数错误，4 其它错误
+	int err:1;
+	byte scene:2;
+	//抽到的宝石的数量
+	int diamond:3[8];
+	//排行榜4的分数。注释同上面同名变量。
+	int rank4Scores:4[];
+	//聚宝盆玩家结果
+	JBPeng_Result jbp:5;
+	//看上面的注释
+	int rank5Scores:6[];
+};
+
+//玩家手动回收
+//如果成功，则发送N_CollectDiamond (type=1)
+//如果失败，则发送N_ClientCollectFailed
+message N_ClientCollect:109  c2s
+{
+	byte scene:1;
+};
+
+message N_ClientCollectFailed:110  s2c
+{
+	//1 宝石为0无需兑换，2 参数错误，3其它错误。
+	int reason:1;
+};
+
+//玩家手动兑换：背包礼物+精魄 => ks礼物
+message N_ClientRedeem:111  c2s
+{
+
+};
+
+message N_ClientRedeemFailed:112  s2c
+{
+	//1 背包礼物+精魄太少，无需兑换，2 其它错误
+	int reason:1;
+};
+
+//玩家手动兑换：背包礼物兑换成精魄
+//message N_ClientRedeemToJp:113  c2s
+//{
+//};
+
+//message N_ClientRedeemToJpResult:114  s2c
+//{
+//0 成功，1 背包是空无需兑换
+//       int err:1;
+//兑换后当前的精魄
+//        int newJp:2;
+//};
+
+struct N_HistoryItem
+{
+	string date:1;
+	string chipex:2;
+};
+
+//客户端请求回收记录
+message N_QueryCollectHistory:115  c2s
+{
+
+};
+
+//客户端请求兑换记录
+message N_QueryRedeemHistory:116  c2s
+{
+
+};
+
+message N_RetQueryCollectHistory:117  s2c
+{
+	//0 成功, 1 不能重复请求 2 服务器异常
+	int err:1;
+	N_HistoryItem data:2[];
+};
+
+message N_RetQueryRedeemHistory:118  s2c
+{
+	int err:1;
+	N_HistoryItem data:2[];
+};
+
+//服务器更新8颗宝石没有开出大奖的计数。
+//进房间时发，每次有回收后发。
+message N_UpdateNotBigGiftCounter:119  s2c
+{
+	int scene:1;
+	int counter:2[8];
+};
+
+//客户端切换场景的时候发一下
+message N_SetCurrentScene:120  c2s
+{
+	//1，2或3
+	int scene:1;
+};
+
+//发送排行榜4的配置
+message Rank4_InitConfig:121  s2c
+{
+	//活动开始日期
+	int startDay:1;
+	//活动结束日期，结束日期永远是闭区间。例如开始日期是1号，则endDay为10号或20号之类的。
+	int endDay:2;
+};
+
+//客户端查询排行榜。
+//注：所有这类操作只能顺序执行，返回之前不能有其它数据库操作。
+message Rank4_QueryRankList:122  c2s
+{
+	//查询哪一天。必须是赛季的起始日期。
+	int day:1;
+};
+
+struct Rank4_RankListItem
+{
+	int userid:1;
+	u8string nickname:2;
+	u8string faceurl:3;
+	//基础积分
+	int fixScore:4;
+	//随机积分
+	int randScore:5;
+};
+
+message Rank4_RetQueryRankList:123  s2c
+{
+	//0 成功。非0出错。
+	//1 参数错误，2 非活动日期，3其它错误, 99服务器繁忙
+	int err:1;
+	int day:3;
+	Rank4_RankListItem items:2[];
+};
+
+//玩家收到邮件后，请求服务器领取邮件奖励
+message Rank4_RedeemReward:124  c2s
+{
+	//哪一赛季的。为赛季的起始日期，例如20250901
+	int intDay:1;
+};
+
+message Rank4_RetRedeemeReward:125  s2c
+{
+	//0成功，非0失败，之后的变量都无意义
+	//1 服务器繁忙中, 2参数错误(日期非法或非赛季日期或服务器无赛季配置信息)，3网络错误，4没有上榜，5已经领奖
+	int err:1;
+	int intDay:2;
+	int giftId:3;
+	int giftCount:4;
+	int rank:5;
+};
+
+//请求积分，永远请求当前赛季的
+//和上面的请求一样，都只能按顺序请求，不能重复请求，否则会服务器繁忙
+message Rank4_QueryScore:126  c2s
+{
+	//哪期
+	int day:1;
+};
+
+//回复Rank4_QueryScore
+//或者下注成功后，积分改变了，也会主动发送
+message Rank4_UpdateScore:127  s2c
+{
+	//0  请求成功的回复
+	//-1 下注成功并且分数改变后主动发送的
+	//1 当前非赛季
+	//2 网络错误(Rank4_QueryScore回复)
+	//99 服务器繁忙
+	int err:1;
+	//哪个赛季
+	int day:2;
+	int fixScore:3;
+	int randScore:4;
+};
+
+//进入房间的时候发。
+//下注完，如果这次有参与活动，数值发生了变化发
+message Rank4_SendPlayerData:128 s2c
+{
+	//当日累计随机分
+	int dayRandScore:1;
+	//当日累计基础分
+	int dayBaseScore:2;
+	//赛季累计基础分
+	int seasonBaseScore:3;
+};
+
+//更新聚宝盆的当前数值。
+//当聚宝盆玩法开启的时候，进入房间发；别人下注导致数值变化时发；0点过后发。
+message JBPeng_Value:129  s2c
+{
+	int value:1;
+	//下注玩家的userid，可能是-1
+	int userid:2 = -1;
+};
+
+//////////////////////////////
+
+//发送排行榜5的配置
+message Rank5_InitConfig:130   s2c
+{
+	//活动开始日期
+	int startDay:1;
+	//活动结束日期，结束日期永远是闭区间。例如开始日期是1号，则endDay为10号或20号之类的。
+	int endDay:2;
+};
+
+//客户端查询排行榜。
+//注：所有这类操作只能顺序执行，返回之前不能有其它数据库操作。
+message Rank5_QueryRankList:131   c2s
+{
+	//查询哪一天。必须是赛季的起始日期。
+	int day:1;
+};
+
+struct Rank5_RankListItem
+{
+	int userid:1;
+	u8string nickname:2;
+	u8string faceurl:3;
+	//基础积分
+	int fixScore:4;
+	//随机积分
+	int randScore:5;
+	//分到的聚宝盆积分。用于结算的时候变成礼物。
+	int extraGiftScore:6;
+};
+
+message Rank5_RetQueryRankList:132   s2c
+{
+	//0 成功。非0出错。
+	//1 参数错误，2 非活动日期，3其它错误, 99服务器繁忙
+	int err:1;
+	int day:3;
+	Rank5_RankListItem items:2[];
+};
+
+//玩家收到邮件后，请求服务器领取邮件奖励
+message Rank5_RedeemReward:133   c2s
+{
+	//哪一赛季的。为赛季的起始日期，例如20250901
+	int intDay:1;
+};
+struct V2 a{
+
+};
+
+message Rank5_RetRedeemeReward:134 s2c
+{
+	//0成功，非0失败，之后的变量都无意义
+	//1 服务器繁忙中, 2参数错误(日期非法或非赛季日期或服务器无赛季配置信息)，3网络错误，4没有上榜，5已经领奖
+	int err:1;
+	int intDay:2;
+	//int giftId:3;
+	//int giftCount:4;
+	int rank:5;
+	//礼物
+	KVItem gifts :6[];
+	int a :7;
+	int bb:8;
+	int bb:9[];
+
+};
+
+
+//请求积分，永远请求当前赛季的
+//和上面的请求一样，都只能按顺序请求，不能重复请求，否则会服务器繁忙
+message Rank5_QueryScore:135   c2s
+{
+	//哪期
+	int day:1;
+};
+
+//回复Rank5_QueryScore
+//或者下注成功后，积分改变了，也会主动发送
+message Rank5_UpdateScore:136   s2c
+{
+	//0  请求成功的回复
+	//-1 下注成功并且分数改变后主动发送的
+	//1 当前非赛季
+	//2 网络错误(Rank5_QueryScore回复)
+	//99 服务器繁忙
+	int err:1;
+	//哪个赛季
+	int day:2;
+	int fixScore:3;
+	int randScore:4;
+};
+
+//进入房间的时候发。
+//下注完，如果这次有参与活动，数值发生了变化发
+message Rank5_SendPlayerData:137  s2c
+{
+	//当日累计随机分
+	//int dayRandScore:1;
+	//当日累计基础分
+	//int dayBaseScore:2;
+	//赛季累计基础分
+	int seasonBaseScore:3;
+};
+
+//客户端请求查看聚宝盆每天放入排行榜的分数
+message Rank5_QueryJBPengExtraValues:138  c2s
+{
+
+};
+
+struct JBPeng_DayExtraValue
+{
+	string day:1;
+	int value:2;
+};
+
+//返回的是整个赛季每一天的，如果某一天没在这个列表中出现，则说明这一天是0
+message Rank5_RetQueryJBPengExtraValues:139  s2c
+{
+	//0 表示成功
+	//1 服务器繁忙中 2 没有配置赛季，3 网络错误
+	int ret:1;
+	JBPeng_DayExtraValue items:2[];
+};
+
+

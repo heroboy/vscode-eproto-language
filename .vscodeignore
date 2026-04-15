@@ -1,0 +1,7 @@
+.vscode/**
+.vscode-test/**
+.gitignore
+vsc-extension-quickstart.md
+test.epr
+test2.epr
+samples/**

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "epr文件路径，如果是相对地址，则相对于配置文件路径"
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string",
+                "const": "cpp"
+              },
+              "outputDir": {
+                "description": "可选，默认为epr文件所在目录",
+                "type": "string"
+              },
+              "outputDirCpp": {
+                "description": "可选，默认和outputDir相同",
+                "type": "string"
+              },
+              "writeJson": {
+                "description": "可选，默认为false，是否输出json文件",
+                "type": "boolean"
+              },
+              "writeTestCase": {
+                "description": "可选，默认为false，是否输出测试用例",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "language"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string",
+                "const": "ts"
+              },
+              "outputDir": {
+                "description": "可选，默认为epr文件所在目录",
+                "type": "string"
+              },
+              "writeTestCase": {
+                "description": "可选，默认为false，是否输出测试用例",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "language"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "构建目标"
+    }
+  },
+  "required": [
+    "files",
+    "targets"
+  ],
+  "additionalProperties": false
+}

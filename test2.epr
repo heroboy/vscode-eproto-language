@@ -1,0 +1,19 @@
+
+//dfajskdflj
+message A:2
+{
+	//dsfasdf
+};
+message a:3 
+{
+	/*
+		dfasf
+	*/
+
+};
+struct B 
+{
+	//comment
+	int s:1;
+	
+};

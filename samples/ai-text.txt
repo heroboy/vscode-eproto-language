@@ -1,0 +1,54 @@
+请生成一份vscode用的语法高亮的textmate格式的json文件。
+此文件扩展名epr，名字是eproto。格式定义如下：
+支持和c++一样的行注释和块注释。
+每一行支持"xxx=xxxx"的设置格式，其中前面key部分支持：protoname,protoid,interfacestyle,serverlanguage,csharpeventstyle,notWriteDate等
+支持struct定义，示例代码如下
+```
+struct JBPeng_Result
+{
+        //这个结构体是否有值。为true，后面的值才有效
+        bool hasValue:1 = false;
+        //赢取礼物的价值。可能是-1，表示赢取全部。
+        int winValue:2;
+        //实际赢取礼物的价值
+        int actualWinValue:3;
+        //实际礼物
+        KVItem gifts:4[];
+};
+```
+每一个变量定义后面有个数字，表示这一个变量的id，需要特别注意一下。
+
+支持message定义，示例代码如下：
+```
+message CrystalExpired:2  s2c
+{
+        //哪个场景的。
+        int scene:1;
+};
+```
+每个message定义后面有数字，也是某个id。并且后面支持0个或多个后续的描述符：s2c, c2s等等。
+
+
+
+请为上面的epr生成一个vscode的扩展程序，对此epr语言进行自动完成。直接使用vscode的api实现，不使用lsp。只需生成大致的框架，详细部分我来写。
+1. message strct不支持嵌套。
+2. 假定每个变量定义都在一行。只作最简单处理。
+3. 大括号未知任意。判断光标位置，只需判断是否在大括号内。（大括号内：进行成员变量的定义， 外： 设置或者message/strct的定义）
+4. 换行的时候，如果上一行没有写id，自动生成一个填上去。
+5. 使用渐进式的分析epr文件，不要每次都完全解析。因为只需要很简单的解析，只需做到判断这一行是否大括号内。
+
+
+请重新写一个vscode用的EprParser
+1. 构造函数输入TextDocument，解析整个文本。
+2. 函数onDidChangeTextDocument，根据编辑的变化更新状态。
+3. 在这个Parser中，需要记录已下每一行的状态
+    是否有"{",是否有"}"，
+    是否是message/struct定义，需要记录下定义的名字。格式："struct XXX" 或者 "message XXX:12 s2c"。注意message的特殊格式，并记录下message后面的id。
+4. 需要记录下文档中所有的message struct定义的名字，如果定义发生改变，需要实时修改。
+
+
+请重新生成一个vscode自动完成扩展的代码，要求
+1. 不使用空格或某些字符激活，要像js中class关键字那样，输入的时候激活。
+2. 如果!inBrace，且在行首，自动完成struct, message, 或者protoname,protoid,interfacestyle等设置用关键字
+3. 在inBrace中，自动完成类型的自动完成类似于这样的代码"int XXX;"
+4. 回车的时候自动加上必要的分号。

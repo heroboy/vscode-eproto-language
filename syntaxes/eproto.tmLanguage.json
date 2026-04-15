@@ -1,0 +1,219 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "eproto",
+	"scopeName": "source.eproto",
+	"fileTypes": [
+		"epr"
+	],
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#settings"
+		},
+		{
+			"include": "#struct"
+		},
+		{
+			"include": "#message"
+		},
+		{
+			"include": "#types"
+		},
+		{
+			"include": "#numbers"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash.eproto",
+					"begin": "//",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.comment.eproto"
+						}
+					},
+					"end": "$"
+				},
+				{
+					"name": "comment.block.eproto",
+					"begin": "/\\*",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.comment.begin.eproto"
+						}
+					},
+					"end": "\\*/",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.comment.end.eproto"
+						}
+					}
+				}
+			]
+		},
+		"settings": {
+			"patterns": [
+				{
+					"name": "meta.setting.eproto",
+					"match": "^\\s*(namespace)\\s*(?:=|\\s+)\\s*([^;\\r\\n]+)\\s*;?$",
+					"captures": {
+						"1": {
+							"name": "entity.name.tag.eproto"
+						},
+						"2": {
+							"name": "string.unquoted.setting.value.eproto"
+						}
+					}
+				},
+				{
+					"name": "meta.setting.eproto",
+					"match": "^\\s*(protoname|interfacestyle|serverlanguage|csharpeventstyle)\\s*=\\s*([^;\\r\\n]+)\\s*;?$",
+					"captures": {
+						"1": {
+							"name": "entity.name.tag.eproto"
+						},
+						"2": {
+							"name": "string.unquoted.setting.value.eproto"
+						}
+					}
+				},
+				{
+					"name": "meta.setting.eproto",
+					"match": "^\\s*(protoid|notWriteDate)\\s*=\\s*(\\d+)\\s*;?$",
+					"captures": {
+						"1": {
+							"name": "entity.name.tag.eproto"
+						},
+						"2": {
+							"name": "constant.numeric.setting.value.eproto"
+						}
+					}
+				}
+			]
+		},
+		"struct": {
+			"patterns": [
+				{
+					"name": "meta.struct.eproto",
+					"begin": "\\bstruct\\s+([A-Za-z_][A-Za-z0-9_]*)",
+					"beginCaptures": {
+						"0": {
+							"name": "keyword.declaration.struct.eproto"
+						},
+						"1": {
+							"name": "entity.name.type.struct.eproto"
+						}
+					},
+					"end": "};",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.struct.eproto"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#comments"
+						},
+						{
+							"include": "#field"
+						}
+					]
+				}
+			]
+		},
+		"message": {
+			"patterns": [
+				{
+					"name": "meta.message.eproto",
+					"begin": "\\bmessage\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*:(\\d+)(.*)",
+					"beginCaptures": {
+						"0": {
+							"name": "keyword.declaration.message.eproto"
+						},
+						"1": {
+							"name": "entity.name.type.message.eproto"
+						},
+						"2": {
+							"name": "constant.numeric.message-id.eproto"
+						},
+						"3": {
+							"name": "meta.message.descriptor.eproto"
+						}
+					},
+					"end": "};",
+					"patterns": [
+						{
+							"include": "#comments"
+						},
+						{
+							"include": "#field"
+						}
+					]
+				}
+			]
+		},
+		"field": {
+			"patterns": [
+				{
+					"name": "meta.field.eproto",
+					"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*:\\s*(\\d+)(\\s*\\[\\s*(\\d+)?\\s*\\])?\\s*(\\s*=\\s*[^;]+)?;",
+					"captures": {
+						"1": {
+							"name": "storage.type.field.eproto"
+						},
+						"2": {
+							"name": "variable.other.field.eproto"
+						},
+						"3": {
+							"name": "punctuation.definition.array.eproto"
+						},
+						"4": {
+							"name": "constant.numeric.field-id.eproto"
+						},
+						"6": {
+							"name": "meta.field.default.eproto"
+						}
+					}
+				},
+				{
+					"name": "meta.field.eproto",
+					"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\s*\\[\\s*(\\d+)?\\s*\\])?\\s*(\\s*=\\s*[^;]+)?;",
+					"captures": {
+						"1": {
+							"name": "storage.type.field.eproto"
+						},
+						"2": {
+							"name": "variable.other.field.eproto"
+						},
+						"3": {
+							"name": "punctuation.definition.array.eproto"
+						},
+						"5": {
+							"name": "meta.field.default.eproto"
+						}
+					}
+				}
+			]
+		},
+		"types": {
+			"patterns": [
+				{
+					"name": "storage.type.primitive.eproto",
+					"match": "\\b(char|uchar|byte|short|ushort|int|long|uint|ulong|int64|longlong|uint64|ulonglong|string|bool|float|double|msgtype|bitbool|u8string)\\b"
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.eproto",
+					"match": "\\b-?\\d+\\b"
+				}
+			]
+		}
+	}
+}
