@@ -87,8 +87,8 @@
 	"scripts": {
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
-		"test": "pnpm run compile && vscode-test",
-		"clean:vscode-test": "node -e \"const fs=require('fs'); try { fs.rmSync('.vscode-test', { recursive: true, force: true }); console.log('cleaned .vscode-test'); } catch (e) { console.warn('skip cleaning .vscode-test:', e.code || e.message); }\"",
+		"test": "pnpm run compile && node ./out/test/runTest.js",
+		"clean:vscode-test": "node -e \"const fs=require('fs'); for (const dir of ['.vscode-test', '.vscode-test-cache']) { try { fs.rmSync(dir, { recursive: true, force: true }); console.log('cleaned', dir); } catch (e) { console.warn('skip cleaning', dir + ':', e.code || e.message); } }\"",
 		"test:clean": "pnpm test && pnpm run clean:vscode-test"
 	}
 }
