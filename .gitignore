@@ -18,6 +18,7 @@ cjs/
 # VS Code
 .vscode/
 .vscode-test/
+.vscode-test-cache/
 
 # Logs
 logs/

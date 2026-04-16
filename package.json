@@ -79,15 +79,15 @@
 		"@types/mocha": "^10.0.0",
 		"@types/node": "^20.0.0",
 		"@types/vscode": "^1.85.0",
-		"@vscode/test-cli": "^0.0.8",
-		"@vscode/test-electron": "^2.3.0",
+		"@vscode/test-cli": "^0.0.12",
+		"@vscode/test-electron": "^2.5.2",
 		"mocha": "^10.0.0",
 		"typescript": "^5.3.0"
 	},
 	"scripts": {
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
-		"test": "vscode-test",
+		"test": "pnpm run compile && vscode-test",
 		"clean:vscode-test": "node -e \"const fs=require('fs'); try { fs.rmSync('.vscode-test', { recursive: true, force: true }); console.log('cleaned .vscode-test'); } catch (e) { console.warn('skip cleaning .vscode-test:', e.code || e.message); }\"",
 		"test:clean": "pnpm test && pnpm run clean:vscode-test"
 	}

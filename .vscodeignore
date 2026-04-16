@@ -1,5 +1,6 @@
 .vscode/**
 .vscode-test/**
+.vscode-test-cache/**
 .gitignore
 vsc-extension-quickstart.md
 test.epr

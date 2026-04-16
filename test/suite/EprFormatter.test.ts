@@ -1,5 +1,4 @@
 import * as assert from 'assert';
-import { test, suite } from 'mocha';
 import * as vscode from 'vscode';
 import { EprFormatter } from '../../src/EprFormatter';
 
