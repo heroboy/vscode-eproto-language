@@ -8,7 +8,9 @@ enum PositionStatus
 	InBrace = 1 << 0,
 	InBlockComment = 1 << 1,
 }
-
+//简单的格式化Epr文件。
+//尽量格式化，即使有一些语法错误。
+//基本上只处理缩进。
 export class EprFormatter
 {
 	private document: vscode.TextDocument;

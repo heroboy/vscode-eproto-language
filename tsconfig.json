@@ -8,9 +8,11 @@
 		"outDir": "out",
 		"sourceMap": true,
 		"strict": true,
-		"rootDir": "src",
-		"isolatedModules": true
+		"isolatedModules": true,
+		"skipLibCheck": true,
+		"types": ["node", "mocha", "vscode"]
 	},
+	"include": ["src/**/*", "test/**/*"],
 	"exclude": [
 		"node_modules",
 		".vscode-test",
