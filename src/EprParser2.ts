@@ -133,7 +133,6 @@ export class EprParser2
 			}
 			this.rebuildFromLine(e.document, startLine);
 		}
-
 	}
 	private rebuildFromLine(document: vscode.TextDocument, startLine: number)
 	{
