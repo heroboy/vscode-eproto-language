@@ -4,6 +4,9 @@ All notable changes to the "uitool-eproto-language" extension will be documented
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.1]
+- 更新epr编译器
+
 ## [0.0.3]
 - 增加*.epr.json的schema。还未集成编译。
 - 改进key=value的语法高亮。支持namespace=XXX或namespace XXXX的写法。
