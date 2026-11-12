@@ -216,6 +216,31 @@ suite('eproto TextMate 语法', () => {
 			expectScope(extendsTokens, extendsLine, 'extends', 'storage.modifier.eproto');
 		});
 
+		test('声明关键字与类型名分处两行', () => {
+			const lines = ['struct ', 'KVItem', '{', '    int a:1;', '};'];
+			const tokens = tokenizeLines(lines);
+			expectScope(tokens[0], lines[0], 'struct', 'keyword.declaration.struct.eproto');
+			expectScope(tokens[1], lines[1], 'KVItem', 'entity.name.type.eproto');
+			expectScope(tokens[1], lines[1], 'KVItem', 'meta.declaration.eproto');
+			expectScope(tokens[3], lines[3], 'a', 'variable.other.field.eproto');
+			expectScope(tokens[4], lines[4], '}', 'punctuation.section.block.end.eproto');
+		});
+
+		test('message 与 enum 也允许关键字与名字分处两行', () => {
+			const msgLines = ['message', 'KVItemMsg:7 s2c', '{', '};'];
+			const msgTokens = tokenizeLines(msgLines);
+			expectScope(msgTokens[0], msgLines[0], 'message', 'keyword.declaration.message.eproto');
+			expectScope(msgTokens[1], msgLines[1], 'KVItemMsg', 'entity.name.type.eproto');
+			expectScope(msgTokens[1], msgLines[1], '7', 'constant.numeric.declaration-tag.eproto');
+			expectScope(msgTokens[1], msgLines[1], 's2c', 'storage.modifier.eproto');
+
+			const enumLines = ['enum', 'Phase', '{', '    p1;', '};'];
+			const enumTokens = tokenizeLines(enumLines);
+			expectScope(enumTokens[0], enumLines[0], 'enum', 'keyword.declaration.enum.eproto');
+			expectScope(enumTokens[1], enumLines[1], 'Phase', 'entity.name.type.eproto');
+			expectScope(enumTokens[3], enumLines[3], 'p1', 'variable.other.enummember.eproto');
+		});
+
 		test('结构体结束后退出结构作用域', () => {
 			const lines = ['struct A', '{', '    int x:1;', '};', 'int y:2;'];
 			const tokens = tokenizeLines(lines);

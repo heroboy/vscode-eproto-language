@@ -28,6 +28,12 @@
 			"include": "#message"
 		},
 		{
+			"include": "#declarationKeyword"
+		},
+		{
+			"include": "#declarationHead"
+		},
+		{
 			"include": "#numbers"
 		},
 		{
@@ -244,7 +250,7 @@
 			"patterns": [
 				{
 					"name": "meta.enum.eproto",
-					"begin": "(?m)^[ \\t]*(enum)\\b(?:[ \\t]+(class)\\b)?[ \\t]*([A-Za-z_][A-Za-z0-9_]*)?[ \\t]*(?::[ \\t]*(char|uchar|byte|short|ushort|int|uint|long|ulong)\\b)?[ \\t]*(itemsafe\\b)?[ \\t]*(\\/\\/.*)?[ \\t]*(?=\\{|$)",
+					"begin": "(?m)^[ \\t]*(enum)\\b(?:[ \\t]+(class)\\b)?[ \\t]*([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?::[ \\t]*(char|uchar|byte|short|ushort|int|uint|long|ulong)\\b)?[ \\t]*(itemsafe\\b)?[ \\t]*(\\/\\/.*)?[ \\t]*(?=\\{|$)",
 					"beginCaptures": {
 						"1": {
 							"name": "keyword.declaration.enum.eproto"
@@ -276,19 +282,7 @@
 							"include": "#comments"
 						},
 						{
-							"name": "meta.enum.member.eproto",
-							"match": "([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?:=[ \\t]*([0-9]+))?[ \\t]*([,;])",
-							"captures": {
-								"1": {
-									"name": "variable.other.enummember.eproto"
-								},
-								"2": {
-									"name": "constant.numeric.enum-value.eproto"
-								},
-								"3": {
-									"name": "punctuation.separator.enum.eproto"
-								}
-							}
+							"include": "#enumMember"
 						},
 						{
 							"match": "\\{",
@@ -386,6 +380,85 @@
 					]
 				}
 			]
+		},
+		"declarationKeyword": {
+			"patterns": [
+				{
+					"match": "(?m)^[ \\t]*(?:(struct)\\b|(message)\\b|(enum)\\b(?:[ \\t]+(class)\\b)?)",
+					"captures": {
+						"1": {
+							"name": "keyword.declaration.struct.eproto"
+						},
+						"2": {
+							"name": "keyword.declaration.message.eproto"
+						},
+						"3": {
+							"name": "keyword.declaration.enum.eproto"
+						},
+						"4": {
+							"name": "storage.modifier.class.eproto"
+						}
+					}
+				}
+			]
+		},
+		"declarationHead": {
+			"patterns": [
+				{
+					"name": "meta.declaration.eproto",
+					"begin": "(?m)^[ \\t]*([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?::[ \\t]*([0-9]+))?[ \\t]*((?:[^\\r\\n;{}\\/]|\\/(?![\\/\\*]))*?)[ \\t]*(\\/\\/.*)?[ \\t]*(?=\\{|$)",
+					"beginCaptures": {
+						"1": {
+							"name": "entity.name.type.eproto"
+						},
+						"2": {
+							"name": "constant.numeric.declaration-tag.eproto"
+						},
+						"3": {
+							"name": "storage.modifier.eproto"
+						},
+						"4": {
+							"name": "comment.line.double-slash.eproto"
+						}
+					},
+					"end": "\\}",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.section.block.end.eproto"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#comments"
+						},
+						{
+							"include": "#field"
+						},
+						{
+							"include": "#enumMember"
+						},
+						{
+							"match": "\\{",
+							"name": "punctuation.section.block.begin.eproto"
+						}
+					]
+				}
+			]
+		},
+		"enumMember": {
+			"name": "meta.enum.member.eproto",
+			"match": "([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?:=[ \\t]*([0-9]+))?[ \\t]*([,;])",
+			"captures": {
+				"1": {
+					"name": "variable.other.enummember.eproto"
+				},
+				"2": {
+					"name": "constant.numeric.enum-value.eproto"
+				},
+				"3": {
+					"name": "punctuation.separator.enum.eproto"
+				}
+			}
 		},
 		"field": {
 			"patterns": [

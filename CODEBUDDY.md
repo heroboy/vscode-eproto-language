@@ -32,7 +32,7 @@ pnpm run clean:vscode-test  # 清理 .vscode-test 缓存
 - `src/compile.ts` — `EPR: Compile Current EPR File`，保存文件后以 `vscode.Task` 调用 `compiler/eProtoCompilerExeV2.exe <epr 路径>`，输出到 `EPR Compile` OutputChannel。
 - `src/CharUtil.ts` — 字符判断工具（旧 tokenizer 遗留使用）。
 - `src/EprParser.ts.bak` — 旧解析器备份，**不参与编译**。
-- `syntaxes/eproto.tmLanguage.json` — TextMate 语法定义，按 `EprDoc` 重写；repository 分为 comments / strings / numbers / directives / userclass / enum / struct / message / field（fieldPrimitive / fieldObject / fieldMsgtype）/ terminators，作用域统一以 `.eproto` 结尾。
+- `syntaxes/eproto.tmLanguage.json` — TextMate 语法定义，按 `EprDoc` 重写；repository 分为 comments / strings / numbers / directives / userclass / enum / struct / message / field（fieldPrimitive / fieldObject / fieldMsgtype）/ enumMember / declarationKeyword / declarationHead / terminators，作用域统一以 `.eproto` 结尾。注意 TextMate 的 `begin` 正则只能在单行内匹配（行是逐行分词的），所以 `struct` 与类型名分处两行这类写法无法用一条 begin 覆盖：`declarationKeyword` 兜底着色独占一行的关键字，`declarationHead` 从类型名那一行开始一段通用声明块（`meta.declaration.eproto` + `entity.name.type.eproto`），块内复用 `#field` 与 `#enumMember`。
 - `language-configuration.json` — 注释、括号、自动闭合等编辑行为。
 - `schema/` — `*.epr.json` 项目配置的 JSON Schema；`genSchema.ts` 用 zod 生成，未纳入 tsconfig。
 - `samples/` — 参考用的语法/文本样例，非代码。
