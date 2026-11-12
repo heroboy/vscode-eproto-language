@@ -9,7 +9,7 @@ import {
 } from '../../src/EprParserStaff';
 
 /** 测试文本里的光标标记；喂给解析器/补全前会被删掉 */
-const CURSOR = '\u2038';
+const CURSOR = '|';
 
 let g_UriSeq = 0;
 
@@ -46,7 +46,7 @@ interface MarkedDocument
 	readonly position: vscode.Position;
 }
 
-/** 把 ‸ 当作光标：先算出 line/character，再从文本中移除 */
+/** 把 | 当作光标：先算出 line/character，再从文本中移除 */
 function createMarkedDocument(marked: string, languageId = 'eproto'): MarkedDocument
 {
 	const index = marked.indexOf(CURSOR);
@@ -130,7 +130,7 @@ suite('EprParserStaff Tests', () =>
 	test('suggests decl keywords and missing directives at top level', () =>
 	{
 		const labels = labelsAt(`protoname=Foo;
-‸`);
+|`);
 
 		assert.ok(contains(labels, 'struct'));
 		assert.ok(contains(labels, 'message'));
@@ -144,7 +144,7 @@ suite('EprParserStaff Tests', () =>
 
 	test('keeps suggesting directives while a partial name is typed', () =>
 	{
-		const labels = labelsAt('prot‸');
+		const labels = labelsAt('prot|');
 		assert.ok(contains(labels, 'protoname'));
 		assert.ok(contains(labels, 'protoid'));
 	});
@@ -158,7 +158,7 @@ suite('EprParserStaff Tests', () =>
 
 message M:2
 {
-    ‸
+    |
 };
 
 struct Later
@@ -177,7 +177,7 @@ struct Later
 
 	test('suggests struct modifiers in a message header', () =>
 	{
-		const labels = labelsAt('message M ‸');
+		const labels = labelsAt('message M |');
 		assert.ok(contains(labels, 'c2s'));
 		assert.ok(contains(labels, 's2c'));
 		assert.ok(contains(labels, 'equal'));
@@ -188,19 +188,19 @@ struct Later
 
 	test('does not repeat an already used modifier', () =>
 	{
-		const labels = labelsAt('message M s2c ‸');
+		const labels = labelsAt('message M s2c |');
 		assert.ok(!contains(labels, 's2c'));
 		assert.ok(contains(labels, 'c2s'));
 	});
 
 	test('suggests the next structure tag after a colon in a message header', () =>
 	{
-		assert.deepStrictEqual(labelsAt('message M:‸'), ['1']);
+		assert.deepStrictEqual(labelsAt('message M:|'), ['1']);
 	});
 
 	test('does not suggest a tag for struct headers', () =>
 	{
-		assert.strictEqual(labelsAt('struct S:‸'), undefined);
+		assert.strictEqual(labelsAt('struct S:|'), undefined);
 	});
 
 	test('suggests the next field tag after a colon in a field', () =>
@@ -208,7 +208,7 @@ struct Later
 		const labels = labelsAt(`struct S
 {
     int a:1;
-    int b:‸
+    int b:|
 };`);
 
 		assert.deepStrictEqual(labels, ['2']);
@@ -217,7 +217,7 @@ struct Later
 	test('suggests directive values', () =>
 	{
 		assert.deepStrictEqual(
-			labelsAt('interfacestyle = ‸'),
+			labelsAt('interfacestyle = |'),
 			['stdcsgame', 'stdcs', 'equal', 'nointerface']
 		);
 	});
@@ -226,7 +226,7 @@ struct Later
 	{
 		const boolLabels = labelsAt(`struct S
 {
-    bool flag:1 = ‸
+    bool flag:1 = |
 };`);
 		assert.ok(contains(boolLabels, 'true'));
 		assert.ok(contains(boolLabels, 'false'));
@@ -238,7 +238,7 @@ struct Later
 };
 struct S
 {
-    E e:1 = ‸
+    E e:1 = |
 };`);
 		assert.ok(contains(enumLabels, 'A'));
 		assert.ok(contains(enumLabels, 'B'));
@@ -248,19 +248,19 @@ struct S
 	{
 		assert.strictEqual(labelsAt(`struct S
 {
-    int a:1; // comment‸
+    int a:1; // comment|
 };`), undefined);
 
 		assert.strictEqual(labelsAt(`struct S
 {
     /*
-    abc‸
+    abc|
 };`), undefined);
 	});
 
 	test('returns nothing outside epr documents', () =>
 	{
-		assert.strictEqual(labelsAt('struct S‸', 'plaintext'), undefined);
+		assert.strictEqual(labelsAt('struct S|', 'plaintext'), undefined);
 	});
 
 	test('computes field tag and semicolon insertions', () =>
@@ -268,7 +268,7 @@ struct S
 		const marked = `struct S
 {
     int a:1;
-    int b‸
+    int b|
 };`;
 
 		assert.strictEqual(fieldLineAt(marked, true), '    int b:2;');
@@ -276,10 +276,10 @@ struct S
 
 		assert.deepStrictEqual(fieldInsertionsAt(`struct S
 {
-    int a:1;‸
+    int a:1;|
 };`, true), [], '已有 tag 和分号时不再插入');
 
-		assert.deepStrictEqual(fieldInsertionsAt(`struct S‸
+		assert.deepStrictEqual(fieldInsertionsAt(`struct S|
 {
     int a:1;
 };`, true), [], '结构体外部不插入');
@@ -287,7 +287,7 @@ struct S
 		assert.deepStrictEqual(fieldInsertionsAt(`struct S
 {
     int a:1;
-}‸;`, true), [], '结束行不插入');
+}|;`, true), [], '结束行不插入');
 	});
 
 	test('inserts the semicolon at the end of a field with a default value', () =>
@@ -295,14 +295,14 @@ struct S
 		assert.strictEqual(fieldLineAt(`struct S
 {
     int a:1;
-    int c = 3‸
+    int c = 3|
 };`, true), '    int c:2 = 3;');
 
 		//数组默认值还没闭合：只补 tag，不补分号
 		assert.strictEqual(fieldLineAt(`struct S
 {
     int a:1;
-    int d = {‸
+    int d = {|
         1, 2
     }
 };`, true), '    int d:2 = {');
@@ -311,14 +311,14 @@ struct S
 {
     int a:1;
     int d = {
-        1, 2‸
+        1, 2|
     }
 };`, true), [], '数组内部不处理');
 	});
 
 	test('computes a declaration tag insertion', () =>
 	{
-		assert.strictEqual(declaredLineAt(`message Foo‸
+		assert.strictEqual(declaredLineAt(`message Foo|
 {
     int a:1;
 };`), 'message Foo:1');
@@ -327,23 +327,23 @@ struct S
 {
     int a:1;
 };
-message Bar {‸`), 'message Bar:8 {');
+message Bar {|`), 'message Bar:8 {');
 
 		assert.strictEqual(declarationInsertionAt(`struct A:7
 {
     int a:1;
 };
-message Bar:8 {‸`), null, '已有 tag 不应重复插入');
+message Bar:8 {|`), null, '已有 tag 不应重复插入');
 	});
 
 	test('does not add a tag to structs, enums, userclasses or body lines', () =>
 	{
-		assert.strictEqual(declarationInsertionAt('struct Plain‸'), null);
-		assert.strictEqual(declarationInsertionAt('enum E { A };‸'), null);
-		assert.strictEqual(declarationInsertionAt('userclass X extends Y;‸'), null);
+		assert.strictEqual(declarationInsertionAt('struct Plain|'), null);
+		assert.strictEqual(declarationInsertionAt('enum E { A };|'), null);
+		assert.strictEqual(declarationInsertionAt('userclass X extends Y;|'), null);
 		assert.strictEqual(declarationInsertionAt(`struct S
 {
-    int a:1‸
+    int a:1|
 };`), null);
 	});
 });
