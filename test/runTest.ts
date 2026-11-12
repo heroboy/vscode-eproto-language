@@ -18,7 +18,8 @@ function getCandidateVSCodeExecutables(): string[] {
 }
 
 async function main(): Promise<void> {
-	const extensionDevelopmentPath = path.resolve(__dirname, '..');
+	// compiled to out-test/test/runTest.js, so the repo root is two levels up
+	const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
 	const extensionTestsPath = path.resolve(__dirname, 'suite', 'index');
 	const launchArgs = ['--disable-extensions'];
 

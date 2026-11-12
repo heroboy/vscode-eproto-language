@@ -2,7 +2,7 @@
 	"name": "uitool-eproto-language",
 	"displayName": "UITool EProto Language",
 	"description": "",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"engines": {
 		"vscode": "^1.107.0"
 	},
@@ -87,10 +87,14 @@
 		"vscode-textmate": "^9.3.2"
 	},
 	"scripts": {
-		"compile": "tsc -p ./",
+		"clean:out": "node -e \"const fs=require('fs'); for (const dir of ['out']) { try { fs.rmSync(dir, { recursive: true, force: true }); console.log('cleaned', dir); } catch (e) { console.warn('skip cleaning', dir + ':', e.code || e.message); } }\"",
+		"clean:test": "node -e \"const fs=require('fs'); for (const dir of ['out-test']) { try { fs.rmSync(dir, { recursive: true, force: true }); console.log('cleaned', dir); } catch (e) { console.warn('skip cleaning', dir + ':', e.code || e.message); } }\"",
+		"clean": "pnpm run clean:out && pnpm run clean:test",
+		"compile": "pnpm run clean:out && tsc -p ./",
+		"compile:test": "pnpm run clean:test && tsc -p ./tsconfig.test.json",
 		"watch": "tsc -watch -p ./",
-		"test:grammar": "node ./out/test/grammar/run.js",
-		"test": "pnpm run compile && pnpm run test:grammar && node ./out/test/runTest.js",
+		"test:grammar": "node ./out-test/test/grammar/run.js",
+		"test": "pnpm run compile && pnpm run compile:test && pnpm run test:grammar && node ./out-test/test/runTest.js",
 		"clean:vscode-test": "node -e \"const fs=require('fs'); for (const dir of ['.vscode-test', '.vscode-test-cache']) { try { fs.rmSync(dir, { recursive: true, force: true }); console.log('cleaned', dir); } catch (e) { console.warn('skip cleaning', dir + ':', e.code || e.message); } }\"",
 		"test:clean": "pnpm test && pnpm run clean:vscode-test"
 	}

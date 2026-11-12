@@ -168,6 +168,7 @@ export function onDidChangeTextDocument(e: vscode.TextDocumentChangeEvent)
 export function activateEprStaff(context: vscode.ExtensionContext)
 {
 	const output = vscode.window.createOutputChannel('EPR Parser');
+	output.appendLine(`EPR extension v${context.extension.packageJSON.version} activated`);
 
 	//自动补全关键字
 	context.subscriptions.push(

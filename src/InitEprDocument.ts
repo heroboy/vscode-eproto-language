@@ -50,7 +50,7 @@ export function InitEprDocument()
 		const base = fileNameOnly.replace(/\.[^/.]+$/, '');
 		linesToAdd.push(`protoname=${base};`);
 	}
-	if (!existing.has('protoid')) linesToAdd.push('protoid=101;');
+	if (!existing.has('protoid')) linesToAdd.push('protoid=102;');
 	if (!existing.has('interfacestyle')) linesToAdd.push('interfacestyle=stdcsgame;');
 	if (!existing.has('serverlanguage')) linesToAdd.push('serverlanguage=cpp;');
 	if (!existing.has('csharpeventstyle')) linesToAdd.push('csharpeventstyle=default;');
