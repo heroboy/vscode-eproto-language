@@ -1,14 +1,13 @@
 import * as vscode from 'vscode';
-import { EprParser2 } from './EprParser2';
 import { EprFormatter } from './EprFormatter';
 import { InitEprDocument } from './InitEprDocument';
 import { compileEpr } from './compile';
-import { activateEprStaff } from './EprParerStaff';
+import { activateEprParserStaff } from './EprParserStaff';
 
 export function activate(context: vscode.ExtensionContext)
 {
-	//激活自动补全的一些功能
-	activateEprStaff(context);
+	//补全、自动 tag、调试命令等
+	activateEprParserStaff(context);
 
 	//初始化文档命令
 	context.subscriptions.push(

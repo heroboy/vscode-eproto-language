@@ -23,15 +23,14 @@ pnpm run clean:vscode-test  # 清理 .vscode-test 缓存
 
 ## 目录结构
 
-- `src/extension.ts` — 扩展入口，注册命令、格式化器，调用 `activateEprStaff`。
-- `src/EprLexer.ts` — 逐行词法扫描器 `EprLineLexer`：把一行切成 Identifier / Number / String / Comment / Punctuation / Unknown，跨行只维护块注释状态；单趟扫描、不回溯，供格式化器与将来的解析器复用。
-- `src/EprParser2.ts` — 核心行状态机 `EprParser2` + `LineStatus`：逐行解析大括号深度、块注释状态，并提取 `message` / `struct` 定义（名称、protoId、类型）。支持增量更新（`onDidChangeTextDocument`）。**尚未改用 `EprLexer`**，重写解析器时应基于它实现。
-- `src/EprParerStaff.ts` — 提供给 VS Code 的能力：补全项提供者、输入 `;` 或换行后自动补协议 id、`eproto.dumpCurrentLineState` 调试命令。文件名中的 `Parer` 是历史拼写错误。
+- `src/extension.ts` — 扩展入口，注册命令、格式化器，调用 `activateEprParserStaff`。
+- `src/EprLexer.ts` — 逐行词法扫描器 `EprLineLexer`：把一行切成 Identifier / Number / String / Comment / Punctuation / Unknown，跨行只维护块注释状态；单趟扫描、不回溯，供格式化器与解析器复用。
+- `src/EprParser.ts` — 容错的结构解析器 `EprParser`：基于 `EprLexer` 解析协议指令、import、`struct`/`message`/`enum`/`userclass` 头部与字段/枚举项，支持跨行头、同一行写 `{`、漏写 `}`、漏写 `;`；输出 `declarations` / `directives` / `imports` / `issues` / 每行 `EprLineInfo`。同时导出 `parseFieldHeader` 供补全使用。
+- `src/EprParserStaff.ts` — 提供给 VS Code 的能力：补全项提供者（关键字/内建与自定义类型/指令/结构修饰符/指令取值/tag）、输入 `;`/回车/`{` 后自动补 tag、`eproto.dumpCurrentLineState` 与 `eproto.dumpAllState` 调试命令。按 `document.version` 缓存解析结果。
 - `src/EprFormatter.ts` — `DocumentFormattingEditProvider` 实现，基于 `EprLineLexer` 只调整行首缩进与空白行：按花括号嵌套深度缩进、行首 `}` 回退一级、注释/字符串里的花括号不计数、块注释续行保持原样，对语法错误尽量容错。
 - `src/InitEprDocument.ts` — `EPR: Init EPR Document`，在文件头补齐 `protoname/protoid/interfacestyle/...` 配置项，已存在的项不重复添加。
 - `src/compile.ts` — `EPR: Compile Current EPR File`，保存文件后以 `vscode.Task` 调用 `compiler/eProtoCompilerExeV2.exe <epr 路径>`，输出到 `EPR Compile` OutputChannel。
 - `src/CharUtil.ts` — 字符判断工具（旧 tokenizer 遗留使用）。
-- `src/EprParser.ts.bak` — 旧解析器备份，**不参与编译**。
 - `syntaxes/eproto.tmLanguage.json` — TextMate 语法定义，按 `EprDoc` 重写；repository 分为 comments / strings / numbers / directives / userclass / enum / struct / message / field（fieldPrimitive / fieldObject / fieldMsgtype）/ enumMember / declarationKeyword / declarationHead / terminators，作用域统一以 `.eproto` 结尾。注意 TextMate 的 `begin` 正则只能在单行内匹配（行是逐行分词的），所以 `struct` 与类型名分处两行这类写法无法用一条 begin 覆盖：`declarationKeyword` 兜底着色独占一行的关键字，`declarationHead` 从类型名那一行开始一段通用声明块（`meta.declaration.eproto` + `entity.name.type.eproto`），块内复用 `#field` 与 `#enumMember`。
 - `language-configuration.json` — 注释、括号、自动闭合等编辑行为。
 - `schema/` — `*.epr.json` 项目配置的 JSON Schema；`genSchema.ts` 用 zod 生成，未纳入 tsconfig。
@@ -60,16 +59,17 @@ message SomeMessage:2 s2c   // :2 为消息 id，s2c/c2s/equal/var/msgfrom 为�
 ```
 
 - 字段格式：`类型 名称:字段id[长度] = 默认值;`
-- 内建类型见 `EprParerStaff.ts` 的 `TYPE_KEYWORDS`；新增类型需同步该数组（必要时也同步 `syntaxes/eproto.tmLanguage.json`）。
+- 内建类型见 `EprParserStaff.ts` 的 `BUILTIN_TYPES`；新增类型需同步该数组（必要时也同步 `syntaxes/eproto.tmLanguage.json`）。
 
 ## 开发约定与注意事项
 
 - **缩进风格**：源码使用 Tab 缩进、Allman 大括号风格、文件名/接口保持现有命名（含历史拼写）。
 - **编码**：epr 文件默认 GBK（`configurationDefaults` 中已设置 `files.encoding: gbk`），修改 epr 样例时勿改为 UTF-8。
-- **解析器缓存**：`g_Parsers` 以 `document.uri` 为键缓存 `EprParser2`，文档关闭时清理；修改解析逻辑时需同时保证增量路径（`onDidChangeTextDocument` / `rebuildFromLine`）与全量路径一致。
-- **补全触发**：补全与自动加 id 依赖 `EprParser2` 的行状态，`isInBrace(line)` 判断的是**上一行**的行尾状态。
+- **解析器缓存**：`EprParserStaff.ts` 的 `g_Parsers` 以 `document.uri` 为键、按 `document.version` 缓存 `EprParser`；版本变化时整篇重解析（真实协议文件约 0.1–0.5ms，1700 行示例约 4ms），文档关闭时清理。修改解析逻辑时同时考虑补全、自动 tag 与两个 dump 命令的读取。
+- **容错优先**：`EprParser` 不为语法错误抛异常，而是记录 `issues` 后继续；遇到未闭合结构会用「下一个 `struct/message/enum/userclass` 行」恢复，遇到行尾未写 `;` 的字段/枚举项也会收下。解析器只做结构与词法层面的识别，不做类型/取值校验（那是编译器的职责）。
+- **补全触发**：补全与自动 tag 都读 `EprParser` 的行状态（`EprLineInfo`：行首深度、块注释、模式、所属定义、跨行头）。自动补 tag 只在单字符变更（`;`、换行、`{`）时触发，且跳过撤销/重做；回车只在行尾生效，避免把一行拆成两半时误插。
 - **格式化器**：只改行首缩进与空白行，不碰行内内容；`EprLineLexer.scanLine` 返回的 token 数组会被复用，需要保存时自行复制。块注释续行刻意保持原样（真实协议里常用于排版或被注释掉的代码）。
-- **测试**：`test/suite/EprFormatter.test.ts` 与 `test/suite/EprLexer.test.ts` 使用手写 mock `TextDocument` / 纯 token 断言，不依赖真实编辑器；新增测试文件需以 `.test.ts` 命名，由 `test/suite/index.ts` 自动收集编译后的 `.test.js`。
+- **测试**：`test/suite/EprFormatter.test.ts`、`EprLexer.test.ts`、`EprParser.test.ts`、`EprParserStaff.test.ts` 使用手写 mock `TextDocument` / 纯 token 断言；新增测试文件需以 `.test.ts` 命名，由 `test/suite/index.ts` 自动收集编译后的 `.test.js`。
 - **语法测试**：`test/grammar/TmLanguage.test.ts` 用 `vscode-textmate` + `vscode-oniguruma` 直接加载 `syntaxes/eproto.tmLanguage.json` 断言分词作用域，入口为 `test/grammar/run.ts`（编译后 `node ./out-test/test/grammar/run.js`）；新增用例按 `suite` / `test` 追加，覆盖示例协议里的常用写法。
 - **已知小坑**：`schema/genSchema.ts` 输出到当前工作目录的 `./epr-project-schema.json`，而仓库中实际文件在 `schema/epr-project-schema.json`；且 `zod` 未列入 `devDependencies`、`schema/` 被 tsconfig 排除。
 - 修改 `package.json` 中的 commands / menus / contributes 后需重新编译并重载窗口才能生效。
@@ -90,7 +90,7 @@ message SomeMessage:2 s2c   // :2 为消息 id，s2c/c2s/equal/var/msgfrom 为�
   - `07-代码生成.md`
   - `08-线上格式.md`
   - `09-实现对照与已知问题.md`
-  - `tmp/` — 文档引用的示例 `.epr` / `.h` / `.cpp` 代码
+  - `tmp/` — 文档引用的示例 `.epr` / `.h` / `.cpp` 代码 （这里面都是临时文件，不需要参考）
 - `D:\projects\NewStyleBigTableGame\BigGameProto\BigGameProto\Protocol` 目录下有大量（40+ 个）真实项目的 `.epr` 文件，可作为语法写法的参考示例；但不属于本仓库，**只读参考，不要修改**。
 - 本仓库内的 `epr格式.md`、`README.md`、`test.epr` / `test2.epr` 只是简略示例；与 `EprDoc` 冲突时以 `EprDoc` 为准，并顺手修正本仓库示例。
 

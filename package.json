@@ -36,6 +36,10 @@
 				"title": "EPR: Dump Current Line State"
 			},
 			{
+				"command": "eproto.dumpAllState",
+				"title": "EPR: Dump All State"
+			},
+			{
 				"command": "eproto.initDocument",
 				"title": "EPR: Init EPR Document"
 			},
@@ -48,6 +52,10 @@
 			"commandPalette": [
 				{
 					"command": "eproto.dumpCurrentLineState",
+					"when": "editorLangId == 'eproto'"
+				},
+				{
+					"command": "eproto.dumpAllState",
 					"when": "editorLangId == 'eproto'"
 				},
 				{
