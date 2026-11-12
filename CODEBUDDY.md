@@ -17,6 +17,8 @@ pnpm run watch          # 增量编译
 pnpm test               # 编译 → 语法分词测试 → 启动 VS Code 集成测试（mocha）
 pnpm run test:grammar   # 只跑 TextMate 语法分词测试（纯 Node，不启动 VS Code）
 pnpm run clean:vscode-test  # 清理 .vscode-test 缓存
+npx vsce package --no-dependencies          # 打包成 vsix（受 .vscodeignore 控制）
+code --install-extension xxx.vsix --force   # 本地安装打包产物
 ```
 
 调试：在 VS Code 中按 F5（`launch.json` 由扩展模板提供），扩展入口为 `out/extension.js`。
@@ -34,6 +36,7 @@ pnpm run clean:vscode-test  # 清理 .vscode-test 缓存
 - `src/CharUtil.ts` — 字符判断工具（旧 tokenizer 遗留使用）。
 - `syntaxes/eproto.tmLanguage.json` — TextMate 语法定义，按 `EprDoc` 重写；repository 分为 comments / strings / numbers / directives / userclass / enum / struct / message / field（fieldPrimitive / fieldObject / fieldMsgtype）/ enumMember / declarationKeyword / declarationHead / terminators，作用域统一以 `.eproto` 结尾。注意 TextMate 的 `begin` 正则只能在单行内匹配（行是逐行分词的），所以 `struct` 与类型名分处两行这类写法无法用一条 begin 覆盖：`declarationKeyword` 兜底着色独占一行的关键字，`declarationHead` 从类型名那一行开始一段通用声明块（`meta.declaration.eproto` + `entity.name.type.eproto`），块内复用 `#field` 与 `#enumMember`。
 - `language-configuration.json` — 注释、括号、自动闭合等编辑行为。
+- `.vscodeignore` — 打包排除规则：只把 `out/`、`syntaxes/`、`schema/*.json`、`compiler/` 与根目录元数据打进 vsix，源码 / 测试 / `_tmp/` 等不打包。
 - `schema/` — `*.epr.json` 项目配置的 JSON Schema；`genSchema.ts` 用 zod 生成，未纳入 tsconfig。
 - `samples/` — 参考用的语法/文本样例，非代码。
 - `compiler/` — 随扩展打包的 Windows 编译器 exe。
