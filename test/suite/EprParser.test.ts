@@ -25,33 +25,27 @@ function parse(content: string): EprParser
 	return new EprParser(createDocument(content));
 }
 
-function joinLines(...items: string[]): string
-{
-	return items.join('\n');
-}
-
 suite('EprParser Tests', () =>
 {
 	test('parses directives, struct and message', () =>
 	{
-		const parser = parse(joinLines(
-			'protoname=TestProto;',
-			'protoid=101;',
-			'interfacestyle=stdcsgame;',
-			'',
-			'struct MyStruct',
-			'{',
-			'    int field1:1;',
-			'    int field2:2 = 123; // 默认值',
-			'    char array:3[];     // 变长数组',
-			'    short array2:4[12]; // 定长数组',
-			'};',
-			'',
-			'message SomeMessage:2 s2c',
-			'{',
-			'    MyStruct fieldX:1;',
-			'};'
-		));
+		const parser = parse(
+`protoname=TestProto;
+protoid=101;
+interfacestyle=stdcsgame;
+
+struct MyStruct
+{
+    int field1:1;
+    int field2:2 = 123; // 默认值
+    char array:3[];     // 变长数组
+    short array2:4[12]; // 定长数组
+};
+
+message SomeMessage:2 s2c
+{
+    MyStruct fieldX:1;
+};`);
 
 		assert.deepStrictEqual(parser.directives.map(d => d.name), ['protoname', 'protoid', 'interfacestyle']);
 		assert.strictEqual(parser.directives[0].value, 'TestProto');
@@ -78,14 +72,13 @@ suite('EprParser Tests', () =>
 
 	test('ignores tags, braces and semicolons inside comments and strings', () =>
 	{
-		const parser = parse(joinLines(
-			'struct S',
-			'{',
-			'    // int fake:99;',
-			'    string s:1 = "int fake:42; } {";',
-			'    int a:2; /* int fake:77; */',
-			'};'
-		));
+		const parser = parse(
+`struct S
+{
+    // int fake:99;
+    string s:1 = "int fake:42; } {";
+    int a:2; /* int fake:77; */
+};`);
 
 		const struct = parser.declarations[0];
 		assert.deepStrictEqual(struct.fields.map(f => f.name), ['s', 'a']);
@@ -104,13 +97,12 @@ suite('EprParser Tests', () =>
 
 	test('supports multi-line declaration headers', () =>
 	{
-		const parser = parse(joinLines(
-			'message PlayerInfo:30 s2c',
-			'    ts = "parent:BaseInfo,prefix:m_"',
-			'{',
-			'    int nId:1;',
-			'};'
-		));
+		const parser = parse(
+`message PlayerInfo:30 s2c
+    ts = "parent:BaseInfo,prefix:m_"
+{
+    int nId:1;
+};`);
 
 		const decl = parser.declarations[0];
 		assert.strictEqual(decl.name, 'PlayerInfo');
@@ -122,14 +114,13 @@ suite('EprParser Tests', () =>
 
 	test('parses enum headers, items and underlying type', () =>
 	{
-		const parser = parse(joinLines(
-			'enum class XiaZhuFail : ushort',
-			'{',
-			'    eUnknown = 0;',
-			'    eInvalidArg = 1,',
-			'    eOther = 100;',
-			'};'
-		));
+		const parser = parse(
+`enum class XiaZhuFail : ushort
+{
+    eUnknown = 0;
+    eInvalidArg = 1,
+    eOther = 100;
+};`);
 
 		const decl = parser.declarations[0];
 		assert.strictEqual(decl.kind, EprDeclKind.Enum);
@@ -150,15 +141,14 @@ suite('EprParser Tests', () =>
 
 	test('parses userclass without a body', () =>
 	{
-		const parser = parse(joinLines(
-			'struct Base',
-			'{',
-			'    int a:1;',
-			'};',
-			'userclass MyPlayer extends Base',
-			'    cppinclude = "game/MyPlayer.h"',
-			'    ;'
-		));
+		const parser = parse(
+`struct Base
+{
+    int a:1;
+};
+userclass MyPlayer extends Base
+    cppinclude = "game/MyPlayer.h"
+    ;`);
 
 		assert.strictEqual(parser.declarations.length, 2);
 		const decl = parser.declarations[1];
@@ -170,15 +160,14 @@ suite('EprParser Tests', () =>
 
 	test('recovers when the previous declaration is missing a closing brace', () =>
 	{
-		const parser = parse(joinLines(
-			'struct A',
-			'{',
-			'    int a:1;',
-			'message B:5',
-			'{',
-			'    int b:2;',
-			'};'
-		));
+		const parser = parse(
+`struct A
+{
+    int a:1;
+message B:5
+{
+    int b:2;
+};`);
 
 		assert.strictEqual(parser.declarations.length, 2);
 		const a = parser.declarations[0];
@@ -193,43 +182,40 @@ suite('EprParser Tests', () =>
 
 	test('tolerates fields without semicolons', () =>
 	{
-		const parser = parse(joinLines(
-			'struct S',
-			'{',
-			'    int a:1',
-			'    int b:2',
-			'};'
-		));
+		const parser = parse(
+`struct S
+{
+    int a:1
+    int b:2
+};`);
 
 		assert.deepStrictEqual(parser.declarations[0].fields.map(f => f.tag), [1, 2]);
 	});
 
 	test('ignores declarations inside block comments', () =>
 	{
-		const parser = parse(joinLines(
-			'/*',
-			'struct Fake',
-			'{',
-			'    int fake:1;',
-			'};',
-			'*/',
-			'struct Real',
-			'{',
-			'    int a:1;',
-			'};'
-		));
+		const parser = parse(
+`/*
+struct Fake
+{
+    int fake:1;
+};
+*/
+struct Real
+{
+    int a:1;
+};`);
 
 		assert.deepStrictEqual(parser.declarations.map(d => d.name), ['Real']);
 	});
 
 	test('tracks line state for completion', () =>
 	{
-		const parser = parse(joinLines(
-			'struct S',
-			'{',
-			'    int a:1;',
-			'};'
-		));
+		const parser = parse(
+`struct S
+{
+    int a:1;
+};`);
 
 		const header = parser.getLineInfo(0);
 		assert.strictEqual(header.mode, EprLineMode.Top);
@@ -249,14 +235,13 @@ suite('EprParser Tests', () =>
 
 	test('reports useful issues without stopping the parse', () =>
 	{
-		const parser = parse(joinLines(
-			'struct S',
-			'{',
-			'    string s:1 = "abc',
-			'    int a:1 = +1;',
-			'};',
-			'/* 未闭合'
-		));
+		const parser = parse(
+`struct S
+{
+    string s:1 = "abc
+    int a:1 = +1;
+};
+/* 未闭合`);
 
 		assert.ok(parser.issues.some(issue => issue.message.includes('字符串未闭合')));
 		assert.ok(parser.issues.some(issue => issue.message.includes('非法字符')));
@@ -273,26 +258,24 @@ suite('EprParser Tests', () =>
 
 	test('computes next structure tag across struct and message', () =>
 	{
-		const parser = parse(joinLines(
-			'struct A:7',
-			'{',
-			'    int a:1;',
-			'};',
-			'message B:3',
-			'{',
-			'    int b:1;',
-			'};'
-		));
+		const parser = parse(
+`struct A:7
+{
+    int a:1;
+};
+message B:3
+{
+    int b:1;
+};`);
 
 		assert.strictEqual(parser.getNextStructureTag(), 8);
 	});
 
 	test('lowercases directive names for deduplication', () =>
 	{
-		const parser = parse(joinLines(
-			'ProtoName=Foo;',
-			'NotWriteDate=1;'
-		));
+		const parser = parse(
+`ProtoName=Foo;
+NotWriteDate=1;`);
 
 		assert.ok(parser.getDirectiveNames().has('protoname'));
 		assert.ok(parser.getDirectiveNames().has('notwritedate'));
