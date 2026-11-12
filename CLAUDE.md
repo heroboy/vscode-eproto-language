@@ -83,6 +83,7 @@ message SomeMessage:2 s2c   // :2 为消息 id，s2c/c2s/equal/var/msgfrom 为�
   - `08-线上格式.md`
   - `09-实现对照与已知问题.md`
   - `tmp/` — 文档引用的示例 `.epr` / `.h` / `.cpp` 代码
+- `D:\projects\NewStyleBigTableGame\BigGameProto\BigGameProto\Protocol` 目录下有大量（40+ 个）真实项目的 `.epr` 文件，可作为语法写法的参考示例；但不属于本仓库，**只读参考，不要修改**。
 - 本仓库内的 `epr格式.md`、`README.md`、`test.epr` / `test2.epr` 只是简略示例；与 `EprDoc` 冲突时以 `EprDoc` 为准，并顺手修正本仓库示例。
 
 ## 提交约定
