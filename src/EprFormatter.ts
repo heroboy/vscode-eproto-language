@@ -1,32 +1,38 @@
-import { TextEdit, Range } from "vscode";
 import * as vscode from 'vscode';
-//import { isPunc, isSymbolChar, isWhiteSpace } from "./CharUtil";
+import { EprLineLexer, EprToken, EprTokenType } from './EprLexer';
 
-enum PositionStatus
-{
-	Empty = 0,
-	InBrace = 1 << 0,
-	InBlockComment = 1 << 1,
-}
-//简单的格式化Epr文件。
-//尽量格式化，即使有一些语法错误。
-//基本上只处理缩进。
+/** 缩进缓存的最大深度，超过后直接按需生成，避免病态输入把缓存撑爆 */
+const MAX_CACHED_INDENT_DEPTH = 64;
+
+/**
+ * epr 文件格式化器。
+ *
+ * 只处理「行首缩进」与「空白行」，行内内容保持原样（与旧实现风格一致）：
+ * 1. 按 `{` / `}` 的嵌套深度缩进，行首的 `}`（含 `};`）回退一级；
+ * 2. 注释与字符串里的花括号不参与深度计算；
+ * 3. 纯空白行清空；
+ * 4. 块注释的续行保持原样（常用于手工排版或被注释掉的代码），
+ *    但仍然参与深度统计之外的所有判断；
+ * 5. 语法错误时尽量容错，多余的 `}` 只把深度夹到 0。
+ */
 export class EprFormatter
 {
-	private document: vscode.TextDocument;
-	private indentString: string;
-	private status: PositionStatus = PositionStatus.Empty;
-	private edits: vscode.TextEdit[] = [];
+	private readonly document: vscode.TextDocument;
+	private readonly indentUnit: string;
+	private readonly edits: vscode.TextEdit[] = [];
+	private readonly lexer = new EprLineLexer();
+	/** 缩进字符串缓存：indentCache[n] 表示 n 层缩进 */
+	private readonly indentCache: string[] = [''];
+	/** 当前行之前的花括号深度 */
+	private depth = 0;
+
 	constructor(document: vscode.TextDocument, options: vscode.FormattingOptions)
 	{
 		this.document = document;
-		if (options.insertSpaces)
-			this.indentString = ' '.repeat(options.tabSize);
-		else
-			this.indentString = '\t';
+		this.indentUnit = options.insertSpaces ? ' '.repeat(options.tabSize) : '\t';
 	}
 
-	getEdits()
+	getEdits(): vscode.TextEdit[]
 	{
 		return this.edits;
 	}
@@ -34,316 +40,120 @@ export class EprFormatter
 	formatWholeDocument()
 	{
 		this.edits.length = 0;
-		this.status = PositionStatus.Empty;
-		for (let i = 0; i < this.document.lineCount; ++i)
+		this.depth = 0;
+		this.lexer.reset();
+
+		const lineCount = this.document.lineCount;
+		for (let i = 0; i < lineCount; ++i)
 		{
 			this.formatLine(i);
 		}
 	}
 
-	private getIndentString(s: PositionStatus)
-	{
-		return (s & PositionStatus.InBrace) ? this.indentString : '';
-	}
 	private formatLine(lineNo: number)
 	{
 		const line = this.document.lineAt(lineNo);
-		let status = this.status;
-		let pos = 0;
-		let pos2: number = 0;
-		let text = line.text;
-		//pos所在位置是一个新行
-		let isBeginOfLine = true;
-		const edits = this.edits;
-		const createRange = (start: number, length: number) =>
-		{
-			const s = line.range.start;
-			return new Range(s.translate(0, start), s.translate(0, start + length));
-		};
-		const createPosition = (start: number) =>
-		{
-			return line.range.start.translate(0, start);
-		};
+		const text = line.text;
 
-		//是不是空白
-		if (line.isEmptyOrWhitespace)
+		//必须在 scanLine 之前读取行首状态，scanLine 会推进块注释状态
+		const startsInBlockComment = this.lexer.inBlockComment;
+		const tokens = this.lexer.scanLine(text);
+
+		const firstNonWhitespace = findFirstNonWhitespace(text);
+		if (firstNonWhitespace >= text.length)
 		{
-			if (!(status & PositionStatus.InBlockComment) && text.length > 0)
+			//块注释内部的空白行属于注释内容，保持原样
+			if (!startsInBlockComment && text.length > 0)
 			{
-				edits.push(TextEdit.delete(line.range));
+				this.edits.push(vscode.TextEdit.delete(line.range));
 			}
 			return;
 		}
-		//是不是空白加上行注释
-		if (!(status & PositionStatus.InBlockComment))
+
+		if (!startsInBlockComment)
 		{
-			let m = /^(\s*)\/\//.exec(text);
-			if (m)
+			const indent = this.getIndentString(this.getIndentDepth(tokens));
+			if (firstNonWhitespace !== indent.length || !text.startsWith(indent))
 			{
-				let indent = this.getIndentString(status);
-				if (m[1] !== indent)
-				{
-					edits.push(TextEdit.replace(createRange(0, m[1].length), indent));
-				}
-				return;
+				const start = line.range.start;
+				this.edits.push(vscode.TextEdit.replace(
+					new vscode.Range(start, start.translate(0, firstNonWhitespace)),
+					indent
+				));
 			}
 		}
-		//如果初始是块注释
-		if (status & PositionStatus.InBlockComment)
+
+		this.updateDepth(tokens);
+	}
+
+	/**
+	 * 计算本行应该使用的缩进层数。
+	 * 行首连续的 `}` 需要回退，注释 token 不打断这个判断。
+	 */
+	private getIndentDepth(tokens: readonly EprToken[]): number
+	{
+		let leadingCloses = 0;
+		for (const token of tokens)
 		{
-			//没有结束块注释
-			pos2 = text.indexOf('*/');
-			if (pos2 === -1)
+			if (token.type === EprTokenType.Comment)
+				continue;
+
+			if (token.type === EprTokenType.Punctuation && token.text === '}')
 			{
-				return;
+				leadingCloses++;
+				continue;
 			}
-			pos = pos2 + 2;
-			status &= ~PositionStatus.InBlockComment;
-			isBeginOfLine = false;
+
+			break;
 		}
-		//todo: 这里依然不支持双引号字符串的特殊处理
-		while (pos < text.length && pos !== -1)
+
+		const depth = this.depth - leadingCloses;
+		return depth > 0 ? depth : 0;
+	}
+
+	/** 根据本行的 `{` / `}` 更新扫描深度 */
+	private updateDepth(tokens: readonly EprToken[])
+	{
+		let depth = this.depth;
+		for (const token of tokens)
 		{
-			let remain = text.substring(pos);
-			if (status & PositionStatus.InBlockComment)
-			{
-				pos2 = text.indexOf('*/');
-				if (pos2 === -1)
-				{
-					break;//break while
-				}
-				pos = pos2 + 2;
-				status &= ~PositionStatus.InBlockComment;
-				isBeginOfLine = false;
-			}
-			else
-			{
-				if (isBeginOfLine)
-				{
-					let indent = this.getIndentString(status);
-					let m = /^\s*/.exec(remain);
-					if (m)
-					{
-						//后面后首字母不是}
-						if (m[0] !== indent && remain[m.index + m[0].length] !== '}')
-						{
-							this.edits.push(TextEdit.replace(createRange(pos + m.index, m[0].length), indent));
-						}
-					}
-				}
-				isBeginOfLine = false;
-				let m = /(\{)|(\})|(\/\*)/.exec(remain);
-				if (!m)
-				{
-					break;
-				}
-				const tmp = m[0];
-				if (tmp === '{')
-				{
-					status |= PositionStatus.InBrace;
-				}
-				else if (tmp === '}')
-				{
-					status &= ~PositionStatus.InBrace;
-				}
-				else if (tmp === '/*')
-				{
-					status |= PositionStatus.InBlockComment;
-				}
-				pos = pos + m.index + m[0].length;
-			}
+			if (token.type !== EprTokenType.Punctuation)
+				continue;
+
+			if (token.text === '{')
+				depth++;
+			else if (token.text === '}')
+				depth--;
 		}
-		this.status = status;
+		this.depth = depth > 0 ? depth : 0;
+	}
+
+	private getIndentString(depth: number): string
+	{
+		if (depth <= 0)
+			return '';
+
+		const cache = this.indentCache;
+		if (depth > MAX_CACHED_INDENT_DEPTH)
+			return this.indentUnit.repeat(depth);
+
+		while (cache.length <= depth)
+		{
+			cache.push(cache[cache.length - 1] + this.indentUnit);
+		}
+		return cache[depth];
 	}
 }
 
-// enum TokenType
-// {
-// 	Empty,
-// 	WhiteSpace,
-// 	Symbol,
-// 	Punc,      //运算符
-// 	StartBlockComment, // "/*"
-// 	StartLineComment,  // "//"
-// 	Comment,
-// 	StartBrace,
-// 	EndBrace,
-// 	StatementEnd,      // ";"
-// 	Other
-// }
-
-// interface Token
-// {
-// 	readonly type: TokenType;
-// 	readonly text: string;
-// 	readonly pos: number;
-// 	readonly length: number;
-// }
-
-// class LineTokenizer
-// {
-// 	private text: string;
-// 	private pos = 0;
-// 	private peekCache: Token[] = [];
-// 	private peeking = false;
-// 	private peekViewPos = -1;
-// 	constructor(text: string)
-// 	{
-// 		this.text = text;
-// 	}
-// 	startPeek()
-// 	{
-// 		if (this.peeking)
-// 			throw new Error('already in peek');
-// 		this.peekViewPos = 0;
-// 	}
-// 	endPeek()
-// 	{
-// 		this.peeking = false;
-// 	}
-// 	peekOne()
-// 	{
-// 		this.startPeek();
-// 		let tmp = this.next();
-// 		this.endPeek();
-// 		return tmp;
-// 	}
-// 	next()
-// 	{
-// 		if (this.peeking)
-// 		{
-// 			let tmp = this.peekCache[this.peekViewPos];
-// 			if (tmp)
-// 			{
-// 				++this.peekViewPos;
-// 				return tmp;
-// 			}
-// 			this.peekViewPos = -1;
-// 			tmp = this.doFetchNext();
-// 			this.peekCache.push(tmp);
-// 			return tmp;
-// 		}
-// 		else
-// 		{
-// 			if (this.peekCache.length > 0)
-// 				return this.peekCache.unshift();
-// 			return this.doFetchNext();
-// 		}
-// 	}
-
-// 	createEmptyToken()
-// 	{
-// 		return {
-// 			type: TokenType.Empty,
-// 			text: '',
-// 			pos: this.pos,
-// 			length: 0
-// 		} as Token;
-// 	}
-// 	private doFetchNext(): Token
-// 	{
-// 		const text = this.text;
-// 		const startPos = this.pos;
-// 		let pos = this.pos;
-
-// 		const createToken = (type: TokenType, text = '') =>
-// 		{
-// 			return {
-// 				type,
-// 				text,
-// 				pos: startPos,
-// 				get length()
-// 				{
-// 					return this.text.length;
-// 				}
-// 			} as Token;
-// 		};
-
-// 		if (pos >= text.length)
-// 		{
-// 			return createToken(TokenType.Empty);
-// 		}
-
-// 		const firstChar = text[pos];
-// 		if (isWhiteSpace(firstChar))
-// 		{
-// 			let lastpos = text.length;
-// 			for (let i = pos + 1; i < text.length; ++i)
-// 			{
-// 				if (!isWhiteSpace(text[i]))
-// 				{
-// 					lastpos = i;
-// 					break;
-// 				}
-// 			}
-// 			this.pos = lastpos;
-// 			return createToken(TokenType.WhiteSpace, text.substring(startPos, lastpos));
-// 		}
-// 		if (firstChar === '/')
-// 		{
-// 			const secondChar = text[pos + 1];
-// 			if (secondChar === '/')
-// 			{
-// 				this.pos += 2;
-// 				return createToken(TokenType.StartLineComment, '//');
-// 			}
-// 			if (secondChar === '*')
-// 			{
-// 				this.pos += 2;
-// 				let pos3 = this.text.indexOf('*/', this.pos);
-// 				if (pos3 !== -1)
-// 				{
-// 					this.pos = pos3 + 2;
-// 					return createToken(TokenType.Comment, this.text.substring(startPos, this.pos));
-// 				}
-// 				return createToken(TokenType.StartBlockComment, '/*');
-// 			}
-// 		}
-
-// 		if (firstChar === ';')
-// 		{
-// 			this.pos++;
-// 			return createToken(TokenType.StatementEnd, ';');
-// 		}
-
-// 		if (isPunc(firstChar))
-// 		{
-// 			this.pos++;
-// 			return createToken(TokenType.Punc, ';');
-// 		}
-
-// 		if (isSymbolChar(firstChar))
-// 		{
-// 			let lastpos = text.length;
-// 			for (let i = pos + 1; i < text.length; ++i)
-// 			{
-// 				if (!isWhiteSpace(text[i]))
-// 				{
-// 					lastpos = i;
-// 					break;
-// 				}
-// 			}
-// 			this.pos = lastpos;
-// 			return createToken(TokenType.Symbol, text.substring(startPos, lastpos));
-// 		}
-
-
-// 		//
-// 		let unknownString = firstChar;
-// 		this.pos++;
-// 		while (this.pos < text.length)
-// 		{
-// 			const c = text[this.pos];
-// 			if (!isWhiteSpace(c) && !isPunc(c) && ''.indexOf(c) === -1)
-// 			{
-// 				unknownString += c;
-// 				this.pos++;
-// 			}
-// 			else
-// 			{
-// 				break;
-// 			}
-// 		}
-// 		return createToken(TokenType.Other, unknownString);
-// 	}
-// }
+/** 返回第一个非空格/Tab 字符的下标；整行都是空白时返回 text.length */
+function findFirstNonWhitespace(text: string): number
+{
+	const len = text.length;
+	for (let i = 0; i < len; i++)
+	{
+		const code = text.charCodeAt(i);
+		if (code !== 0x20 && code !== 0x09)
+			return i;
+	}
+	return len;
+}
