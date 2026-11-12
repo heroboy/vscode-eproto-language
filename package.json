@@ -82,12 +82,15 @@
 		"@vscode/test-cli": "^0.0.12",
 		"@vscode/test-electron": "^2.5.2",
 		"mocha": "^10.0.0",
-		"typescript": "^5.3.0"
+		"typescript": "^5.3.0",
+		"vscode-oniguruma": "^2.0.1",
+		"vscode-textmate": "^9.3.2"
 	},
 	"scripts": {
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
-		"test": "pnpm run compile && node ./out/test/runTest.js",
+		"test:grammar": "node ./out/test/grammar/run.js",
+		"test": "pnpm run compile && pnpm run test:grammar && node ./out/test/runTest.js",
 		"clean:vscode-test": "node -e \"const fs=require('fs'); for (const dir of ['.vscode-test', '.vscode-test-cache']) { try { fs.rmSync(dir, { recursive: true, force: true }); console.log('cleaned', dir); } catch (e) { console.warn('skip cleaning', dir + ':', e.code || e.message); } }\"",
 		"test:clean": "pnpm test && pnpm run clean:vscode-test"
 	}

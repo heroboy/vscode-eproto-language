@@ -10,7 +10,16 @@
 			"include": "#comments"
 		},
 		{
-			"include": "#settings"
+			"include": "#strings"
+		},
+		{
+			"include": "#directives"
+		},
+		{
+			"include": "#userclass"
+		},
+		{
+			"include": "#enum"
 		},
 		{
 			"include": "#struct"
@@ -19,10 +28,10 @@
 			"include": "#message"
 		},
 		{
-			"include": "#types"
+			"include": "#numbers"
 		},
 		{
-			"include": "#numbers"
+			"include": "#terminators"
 		}
 	],
 	"repository": {
@@ -55,43 +64,240 @@
 				}
 			]
 		},
-		"settings": {
+		"strings": {
 			"patterns": [
 				{
-					"name": "meta.setting.eproto",
-					"match": "^\\s*(namespace)\\s*(?:=|\\s+)\\s*([^;\\r\\n]+)\\s*;?$",
+					"name": "string.quoted.double.eproto",
+					"match": "\"[^\"\\r\\n]*\""
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.eproto",
+					"match": "(?<![\\w.])-?(?:[0-9]+(?:\\.[0-9]+f?)?|\\.[0-9]+f?)"
+				}
+			]
+		},
+		"directives": {
+			"patterns": [
+				{
+					"name": "meta.directive.eproto",
+					"match": "(?i)^[ \\t]*(protoid|notwritedate|cppwithnsname|cppwriteprototools|interfacewithtableid|notostream|cppmultifile)[ \\t]*=[ \\t]*([0-9]+)[ \\t]*(;)?",
 					"captures": {
 						"1": {
-							"name": "entity.name.tag.eproto"
+							"name": "entity.name.tag.directive.eproto"
 						},
 						"2": {
-							"name": "string.unquoted.setting.value.eproto"
+							"name": "constant.numeric.directive.value.eproto"
+						},
+						"3": {
+							"name": "punctuation.terminator.eproto"
 						}
 					}
 				},
 				{
-					"name": "meta.setting.eproto",
-					"match": "^\\s*(protoname|interfacestyle|serverlanguage|csharpeventstyle)\\s*=\\s*([^;\\r\\n]+)\\s*;?$",
+					"name": "meta.directive.eproto",
+					"match": "(?i)^[ \\t]*(interfacestyle|cpptojsonstyle|protousefor|serverlanguage|csharpeventstyle|tsmodulestyle)[ \\t]*=[ \\t]*([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(;)?",
 					"captures": {
 						"1": {
-							"name": "entity.name.tag.eproto"
+							"name": "entity.name.tag.directive.eproto"
 						},
 						"2": {
-							"name": "string.unquoted.setting.value.eproto"
+							"name": "string.unquoted.directive.value.eproto"
+						},
+						"3": {
+							"name": "punctuation.terminator.eproto"
 						}
 					}
 				},
 				{
-					"name": "meta.setting.eproto",
-					"match": "^\\s*(protoid|notWriteDate)\\s*=\\s*(\\d+)\\s*;?$",
+					"name": "meta.directive.eproto",
+					"match": "(?i)^[ \\t]*(protoname|cppprecompileheader|cppcodestyle)[ \\t]*=[ \\t]*([^\\s;]+)[ \\t]*(;)?",
 					"captures": {
 						"1": {
-							"name": "entity.name.tag.eproto"
+							"name": "entity.name.tag.directive.eproto"
 						},
 						"2": {
-							"name": "constant.numeric.setting.value.eproto"
+							"name": "string.unquoted.directive.value.eproto"
+						},
+						"3": {
+							"name": "punctuation.terminator.eproto"
 						}
 					}
+				},
+				{
+					"name": "meta.directive.eproto",
+					"match": "(?i)^[ \\t]*(as3mainpackage|as3toolpackage)[ \\t]*=[ \\t]*([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)[ \\t]*(;)?",
+					"captures": {
+						"1": {
+							"name": "entity.name.tag.directive.eproto"
+						},
+						"2": {
+							"name": "string.unquoted.directive.value.eproto"
+						},
+						"3": {
+							"name": "punctuation.terminator.eproto"
+						}
+					}
+				},
+				{
+					"name": "meta.directive.eproto",
+					"match": "(?i)^[ \\t]*(tsnamespace)[ \\t]*=[ \\t]*(\"[^\"\\r\\n]*\")[ \\t]*(;)?",
+					"captures": {
+						"1": {
+							"name": "entity.name.tag.directive.eproto"
+						},
+						"2": {
+							"name": "string.quoted.double.eproto"
+						},
+						"3": {
+							"name": "punctuation.terminator.eproto"
+						}
+					}
+				},
+				{
+					"name": "meta.directive.eproto",
+					"match": "(?i)^[ \\t]*(namespace)[ \\t]*(?:=[ \\t]*)?([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(;)?",
+					"captures": {
+						"1": {
+							"name": "entity.name.tag.directive.eproto"
+						},
+						"2": {
+							"name": "string.unquoted.directive.value.eproto"
+						},
+						"3": {
+							"name": "punctuation.terminator.eproto"
+						}
+					}
+				},
+				{
+					"name": "meta.directive.eproto",
+					"match": "(?i)^[ \\t]*(import)[ \\t]+(\"[^\"\\r\\n]*\")[ \\t]*(;)?",
+					"captures": {
+						"1": {
+							"name": "entity.name.tag.directive.eproto"
+						},
+						"2": {
+							"name": "string.quoted.double.eproto"
+						},
+						"3": {
+							"name": "punctuation.terminator.eproto"
+						}
+					}
+				}
+			]
+		},
+		"userclass": {
+			"patterns": [
+				{
+					"name": "meta.userclass.eproto",
+					"begin": "(?m)^[ \\t]*(userclass)\\b[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]+(extends|public)\\b[ \\t]+([A-Za-z_][A-Za-z0-9_]*)",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.declaration.userclass.eproto"
+						},
+						"2": {
+							"name": "entity.name.type.userclass.eproto"
+						},
+						"3": {
+							"name": "storage.modifier.extends.eproto"
+						},
+						"4": {
+							"name": "entity.other.inherited-class.eproto"
+						}
+					},
+					"end": ";",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.eproto"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#comments"
+						},
+						{
+							"name": "meta.userclass.attribute.eproto",
+							"match": "(cppinclude|csharpnamespace|as3pack)\\b[ \\t]*=[ \\t]*(\"[^\"\\r\\n]*\")[ \\t]*(;)?",
+							"captures": {
+								"1": {
+									"name": "entity.name.tag.userclass.eproto"
+								},
+								"2": {
+									"name": "string.quoted.double.eproto"
+								},
+								"3": {
+									"name": "punctuation.terminator.eproto"
+								}
+							}
+						},
+						{
+							"include": "#strings"
+						}
+					]
+				}
+			]
+		},
+		"enum": {
+			"patterns": [
+				{
+					"name": "meta.enum.eproto",
+					"begin": "(?m)^[ \\t]*(enum)\\b(?:[ \\t]+(class)\\b)?[ \\t]*([A-Za-z_][A-Za-z0-9_]*)?[ \\t]*(?::[ \\t]*(char|uchar|byte|short|ushort|int|uint|long|ulong)\\b)?[ \\t]*(itemsafe\\b)?[ \\t]*(\\/\\/.*)?[ \\t]*(?=\\{|$)",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.declaration.enum.eproto"
+						},
+						"2": {
+							"name": "storage.modifier.class.eproto"
+						},
+						"3": {
+							"name": "entity.name.type.enum.eproto"
+						},
+						"4": {
+							"name": "storage.type.primitive.eproto"
+						},
+						"5": {
+							"name": "storage.modifier.itemsafe.eproto"
+						},
+						"6": {
+							"name": "comment.line.double-slash.eproto"
+						}
+					},
+					"end": "\\}",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.section.block.end.enum.eproto"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#comments"
+						},
+						{
+							"name": "meta.enum.member.eproto",
+							"match": "([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?:=[ \\t]*([0-9]+))?[ \\t]*([,;])",
+							"captures": {
+								"1": {
+									"name": "variable.other.enummember.eproto"
+								},
+								"2": {
+									"name": "constant.numeric.enum-value.eproto"
+								},
+								"3": {
+									"name": "punctuation.separator.enum.eproto"
+								}
+							}
+						},
+						{
+							"match": "\\{",
+							"name": "punctuation.section.block.begin.enum.eproto"
+						},
+						{
+							"include": "#numbers"
+						}
+					]
 				}
 			]
 		},
@@ -99,19 +305,28 @@
 			"patterns": [
 				{
 					"name": "meta.struct.eproto",
-					"begin": "\\bstruct\\s+([A-Za-z_][A-Za-z0-9_]*)",
+					"begin": "(?m)^[ \\t]*(struct)\\b[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?::[ \\t]*([0-9]+))?[ \\t]*((?:[^\\r\\n;{}\\/]|\\/(?![\\/\\*]))*?)[ \\t]*(\\/\\/.*)?[ \\t]*(?=\\{|$)",
 					"beginCaptures": {
-						"0": {
+						"1": {
 							"name": "keyword.declaration.struct.eproto"
 						},
-						"1": {
+						"2": {
 							"name": "entity.name.type.struct.eproto"
+						},
+						"3": {
+							"name": "constant.numeric.struct-tag.eproto"
+						},
+						"4": {
+							"name": "storage.modifier.eproto"
+						},
+						"5": {
+							"name": "comment.line.double-slash.eproto"
 						}
 					},
-					"end": "};",
+					"end": "\\}",
 					"endCaptures": {
 						"0": {
-							"name": "punctuation.terminator.struct.eproto"
+							"name": "punctuation.section.block.end.struct.eproto"
 						}
 					},
 					"patterns": [
@@ -120,6 +335,10 @@
 						},
 						{
 							"include": "#field"
+						},
+						{
+							"match": "\\{",
+							"name": "punctuation.section.block.begin.struct.eproto"
 						}
 					]
 				}
@@ -129,28 +348,40 @@
 			"patterns": [
 				{
 					"name": "meta.message.eproto",
-					"begin": "\\bmessage\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*:(\\d+)(.*)",
+					"begin": "(?m)^[ \\t]*(message)\\b[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?::[ \\t]*([0-9]+))?[ \\t]*((?:[^\\r\\n;{}\\/]|\\/(?![\\/\\*]))*?)[ \\t]*(\\/\\/.*)?[ \\t]*(?=\\{|$)",
 					"beginCaptures": {
-						"0": {
+						"1": {
 							"name": "keyword.declaration.message.eproto"
 						},
-						"1": {
+						"2": {
 							"name": "entity.name.type.message.eproto"
 						},
-						"2": {
+						"3": {
 							"name": "constant.numeric.message-id.eproto"
 						},
-						"3": {
-							"name": "meta.message.descriptor.eproto"
+						"4": {
+							"name": "storage.modifier.eproto"
+						},
+						"5": {
+							"name": "comment.line.double-slash.eproto"
 						}
 					},
-					"end": "};",
+					"end": "\\}",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.section.block.end.message.eproto"
+						}
+					},
 					"patterns": [
 						{
 							"include": "#comments"
 						},
 						{
 							"include": "#field"
+						},
+						{
+							"match": "\\{",
+							"name": "punctuation.section.block.begin.message.eproto"
 						}
 					]
 				}
@@ -159,59 +390,154 @@
 		"field": {
 			"patterns": [
 				{
-					"name": "meta.field.eproto",
-					"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*:\\s*(\\d+)(\\s*\\[\\s*(\\d+)?\\s*\\])?\\s*(\\s*=\\s*[^;]+)?;",
-					"captures": {
-						"1": {
-							"name": "storage.type.field.eproto"
-						},
-						"2": {
-							"name": "variable.other.field.eproto"
-						},
-						"3": {
-							"name": "punctuation.definition.array.eproto"
-						},
-						"4": {
-							"name": "constant.numeric.field-id.eproto"
-						},
-						"6": {
-							"name": "meta.field.default.eproto"
-						}
-					}
+					"include": "#fieldMsgtype"
 				},
 				{
-					"name": "meta.field.eproto",
-					"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\s*\\[\\s*(\\d+)?\\s*\\])?\\s*(\\s*=\\s*[^;]+)?;",
-					"captures": {
-						"1": {
-							"name": "storage.type.field.eproto"
+					"include": "#fieldPrimitive"
+				},
+				{
+					"include": "#fieldObject"
+				}
+			]
+		},
+		"fieldPrimitive": {
+			"name": "meta.field.eproto",
+			"match": "(?m)^[ \\t]*(?:(card)[ \\t]+)?(char|uchar|byte|short|ushort|int|long|uint|ulong|int64|longlong|uint64|ulonglong|float|double|bool|bitbool|string|u8string)\\b[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]*:[ \\t]*([0-9]+)(?:[ \\t]*(\\[)[ \\t]*([0-9]+)?[ \\t]*(\\]))?[ \\t]*(?:=[ \\t]*((?:\\{[^}]*\\})|(?:\"[^\"\\r\\n]*\")|(?:[^\\s;]+)))?[ \\t]*((?:[A-Za-z_][A-Za-z0-9_]*[ \\t]*)*)(;)",
+			"captures": {
+				"1": {
+					"name": "storage.modifier.card.eproto"
+				},
+				"2": {
+					"name": "storage.type.primitive.eproto"
+				},
+				"3": {
+					"name": "variable.other.field.eproto"
+				},
+				"4": {
+					"name": "constant.numeric.field-id.eproto"
+				},
+				"5": {
+					"name": "punctuation.definition.array.eproto"
+				},
+				"6": {
+					"name": "constant.numeric.array-length.eproto"
+				},
+				"7": {
+					"name": "punctuation.definition.array.eproto"
+				},
+				"8": {
+					"name": "meta.field.default.eproto",
+					"patterns": [
+						{
+							"include": "#numbers"
 						},
-						"2": {
-							"name": "variable.other.field.eproto"
+						{
+							"include": "#strings"
 						},
-						"3": {
-							"name": "punctuation.definition.array.eproto"
+						{
+							"match": "\\b(?:true|false)\\b",
+							"name": "constant.language.boolean.eproto"
 						},
-						"5": {
-							"name": "meta.field.default.eproto"
+						{
+							"match": "[A-Za-z_][A-Za-z0-9_]*",
+							"name": "string.unquoted.eproto"
 						}
-					}
+					]
+				},
+				"9": {
+					"name": "storage.modifier.field.eproto"
+				},
+				"10": {
+					"name": "punctuation.terminator.field.eproto"
 				}
-			]
+			}
 		},
-		"types": {
+		"fieldObject": {
+			"name": "meta.field.eproto",
+			"match": "(?m)^[ \\t]*(?:(card)[ \\t]+)?([A-Za-z_][A-Za-z0-9_]*)[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]*:[ \\t]*([0-9]+)(?:[ \\t]*(\\[)[ \\t]*([0-9]+)?[ \\t]*(\\]))?[ \\t]*(?:=[ \\t]*((?:\\{[^}]*\\})|(?:\"[^\"\\r\\n]*\")|(?:[^\\s;]+)))?[ \\t]*((?:[A-Za-z_][A-Za-z0-9_]*[ \\t]*)*)(;)",
+			"captures": {
+				"1": {
+					"name": "storage.modifier.card.eproto"
+				},
+				"2": {
+					"name": "storage.type.object.eproto"
+				},
+				"3": {
+					"name": "variable.other.field.eproto"
+				},
+				"4": {
+					"name": "constant.numeric.field-id.eproto"
+				},
+				"5": {
+					"name": "punctuation.definition.array.eproto"
+				},
+				"6": {
+					"name": "constant.numeric.array-length.eproto"
+				},
+				"7": {
+					"name": "punctuation.definition.array.eproto"
+				},
+				"8": {
+					"name": "meta.field.default.eproto",
+					"patterns": [
+						{
+							"include": "#numbers"
+						},
+						{
+							"include": "#strings"
+						},
+						{
+							"match": "\\b(?:true|false)\\b",
+							"name": "constant.language.boolean.eproto"
+						},
+						{
+							"match": "[A-Za-z_][A-Za-z0-9_]*",
+							"name": "string.unquoted.eproto"
+						}
+					]
+				},
+				"9": {
+					"name": "storage.modifier.field.eproto"
+				},
+				"10": {
+					"name": "punctuation.terminator.field.eproto"
+				}
+			}
+		},
+		"fieldMsgtype": {
+			"name": "meta.field.eproto",
+			"match": "(?m)^[ \\t]*(?:(card)[ \\t]+)?(msgtype)\\b[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]*:[ \\t]*([0-9]+)[ \\t]*(;)",
+			"captures": {
+				"1": {
+					"name": "storage.modifier.card.eproto"
+				},
+				"2": {
+					"name": "storage.type.msgtype.eproto"
+				},
+				"3": {
+					"name": "variable.other.field.eproto"
+				},
+				"4": {
+					"name": "constant.numeric.field-id.eproto"
+				},
+				"5": {
+					"name": "punctuation.terminator.field.eproto"
+				}
+			}
+		},
+		"terminators": {
 			"patterns": [
 				{
-					"name": "storage.type.primitive.eproto",
-					"match": "\\b(char|uchar|byte|short|ushort|int|long|uint|ulong|int64|longlong|uint64|ulonglong|string|bool|float|double|msgtype|bitbool|u8string)\\b"
-				}
-			]
-		},
-		"numbers": {
-			"patterns": [
+					"match": ";",
+					"name": "punctuation.terminator.eproto"
+				},
 				{
-					"name": "constant.numeric.eproto",
-					"match": "\\b-?\\d+\\b"
+					"match": "\\{",
+					"name": "punctuation.section.block.begin.eproto"
+				},
+				{
+					"match": "\\}",
+					"name": "punctuation.section.block.end.eproto"
 				}
 			]
 		}

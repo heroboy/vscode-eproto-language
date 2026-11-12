@@ -12,7 +12,8 @@
 pnpm install            # 安装依赖
 pnpm run compile        # tsc 编译到 out/
 pnpm run watch          # 增量编译
-pnpm test               # 编译后启动 VS Code 集成测试（mocha）
+pnpm test               # 编译 → 语法分词测试 → 启动 VS Code 集成测试（mocha）
+pnpm run test:grammar   # 只跑 TextMate 语法分词测试（纯 Node，不启动 VS Code）
 pnpm run clean:vscode-test  # 清理 .vscode-test 缓存
 ```
 
@@ -28,7 +29,7 @@ pnpm run clean:vscode-test  # 清理 .vscode-test 缓存
 - `src/compile.ts` — `EPR: Compile Current EPR File`，保存文件后以 `vscode.Task` 调用 `compiler/eProtoCompilerExeV2.exe <epr 路径>`，输出到 `EPR Compile` OutputChannel。
 - `src/CharUtil.ts` — 字符判断工具（旧 tokenizer 遗留使用）。
 - `src/EprParser.ts.bak` — 旧解析器备份，**不参与编译**。
-- `syntaxes/eproto.tmLanguage.json` — TextMate 语法定义（comments / settings / struct / message / types / numbers）。
+- `syntaxes/eproto.tmLanguage.json` — TextMate 语法定义，按 `EprDoc` 重写；repository 分为 comments / strings / numbers / directives / userclass / enum / struct / message / field（fieldPrimitive / fieldObject / fieldMsgtype）/ terminators，作用域统一以 `.eproto` 结尾。
 - `language-configuration.json` — 注释、括号、自动闭合等编辑行为。
 - `schema/` — `*.epr.json` 项目配置的 JSON Schema；`genSchema.ts` 用 zod 生成，未纳入 tsconfig。
 - `samples/` — 参考用的语法/文本样例，非代码。
@@ -65,6 +66,7 @@ message SomeMessage:2 s2c   // :2 为消息 id，s2c/c2s/equal/var/msgfrom 为�
 - **解析器缓存**：`g_Parsers` 以 `document.uri` 为键缓存 `EprParser2`，文档关闭时清理；修改解析逻辑时需同时保证增量路径（`onDidChangeTextDocument` / `rebuildFromLine`）与全量路径一致。
 - **补全触发**：补全与自动加 id 依赖 `EprParser2` 的行状态，`isInBrace(line)` 判断的是**上一行**的行尾状态。
 - **测试**：`test/suite/EprFormatter.test.ts` 使用手写 mock `TextDocument`，不依赖真实编辑器；新增测试文件需以 `.test.ts` 命名，由 `test/suite/index.ts` 自动收集编译后的 `.test.js`。
+- **语法测试**：`test/grammar/TmLanguage.test.ts` 用 `vscode-textmate` + `vscode-oniguruma` 直接加载 `syntaxes/eproto.tmLanguage.json` 断言分词作用域，入口为 `test/grammar/run.ts`（编译后 `node ./out/test/grammar/run.js`）；新增用例按 `suite` / `test` 追加，覆盖示例协议里的常用写法。
 - **已知小坑**：`schema/genSchema.ts` 输出到当前工作目录的 `./epr-project-schema.json`，而仓库中实际文件在 `schema/epr-project-schema.json`；且 `zod` 未列入 `devDependencies`、`schema/` 被 tsconfig 排除。
 - 修改 `package.json` 中的 commands / menus / contributes 后需重新编译并重载窗口才能生效。
 
