@@ -1,6 +1,8 @@
-# CLAUDE.md
+# CODEBUDDY.md
 
-本文件为 Claude Code / CodeBuddy 在本仓库工作时提供指引。
+本文件为 CodeBuddy 在本仓库工作时提供指引。
+
+> 项目根目录的 `CODEBUDDY.md` 会被 CodeBuddy **自动读取并放入每次会话的上下文**，无需手动 `@` 引用；修改后需**新建会话**才会生效。请勿再创建 `CLAUDE.md` 以免两份内容不一致。
 
 ## 项目概述
 
