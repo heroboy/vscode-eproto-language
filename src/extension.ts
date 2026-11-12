@@ -3,6 +3,7 @@ import { EprFormatter } from './EprFormatter';
 import { InitEprDocument } from './InitEprDocument';
 import { compileEpr } from './compile';
 import { activateEprParserStaff } from './EprParserStaff';
+import { measureCallback } from './Perf';
 
 export function activate(context: vscode.ExtensionContext)
 {
@@ -18,9 +19,16 @@ export function activate(context: vscode.ExtensionContext)
 	context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider('eproto', {
 		provideDocumentFormattingEdits(document, options, token)
 		{
-			let f = new EprFormatter(document, options);
-			f.formatWholeDocument();
-			return f.getEdits();
+			return measureCallback(
+				'provideDocumentFormattingEdits',
+				() =>
+				{
+					let f = new EprFormatter(document, options);
+					f.formatWholeDocument();
+					return f.getEdits();
+				},
+				`${document.uri.fsPath} (${document.lineCount} lines)`
+			);
 		},
 	}));
 

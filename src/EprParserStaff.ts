@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { EprLineLexer, EprToken, EprTokenType } from './EprLexer';
+import { getPerfOutputChannel, measureCallback } from './Perf';
 import {
 	EprDeclInfo,
 	EprDeclKind,
@@ -443,6 +444,18 @@ export function provideCompletionItems(
 	position: vscode.Position
 ): vscode.CompletionItem[] | undefined
 {
+	return measureCallback(
+		'provideCompletionItems',
+		() => provideCompletionItemsImpl(document, position),
+		`${document.uri.fsPath}:${position.line + 1}:${position.character} (${document.lineCount} lines)`
+	);
+}
+
+function provideCompletionItemsImpl(
+	document: vscode.TextDocument,
+	position: vscode.Position
+): vscode.CompletionItem[] | undefined
+{
 	if (document.languageId !== 'eproto')
 		return undefined;
 
@@ -715,6 +728,16 @@ export function onDidChangeTextDocument(e: vscode.TextDocumentChangeEvent)
 {
 	if (e.document.languageId !== 'eproto')
 		return;
+
+	measureCallback(
+		'onDidChangeTextDocument',
+		() => onDidChangeTextDocumentImpl(e),
+		`${e.document.uri.fsPath} (${e.document.lineCount} lines, ${e.contentChanges.length} change(s))`
+	);
+}
+
+function onDidChangeTextDocumentImpl(e: vscode.TextDocumentChangeEvent)
+{
 	if (e.reason === vscode.TextDocumentChangeReason.Undo
 		|| e.reason === vscode.TextDocumentChangeReason.Redo)
 		return;
@@ -925,6 +948,7 @@ export function dumpAllState()
 export function activateEprParserStaff(context: vscode.ExtensionContext)
 {
 	context.subscriptions.push(getOutputChannel());
+	context.subscriptions.push(getPerfOutputChannel());
 
 	context.subscriptions.push(
 		vscode.languages.registerCompletionItemProvider('eproto', { provideCompletionItems }, ':', ' ')
