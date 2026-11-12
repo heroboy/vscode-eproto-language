@@ -69,6 +69,7 @@ message SomeMessage:2 s2c   // :2 为消息 id，s2c/c2s/equal/var/msgfrom 为�
 - **语法测试**：`test/grammar/TmLanguage.test.ts` 用 `vscode-textmate` + `vscode-oniguruma` 直接加载 `syntaxes/eproto.tmLanguage.json` 断言分词作用域，入口为 `test/grammar/run.ts`（编译后 `node ./out/test/grammar/run.js`）；新增用例按 `suite` / `test` 追加，覆盖示例协议里的常用写法。
 - **已知小坑**：`schema/genSchema.ts` 输出到当前工作目录的 `./epr-project-schema.json`，而仓库中实际文件在 `schema/epr-project-schema.json`；且 `zod` 未列入 `devDependencies`、`schema/` 被 tsconfig 排除。
 - 修改 `package.json` 中的 commands / menus / contributes 后需重新编译并重载窗口才能生效。
+- **临时文件**：调试脚本、临时输出、试验用 `.epr` 等一律写到仓库根目录的 `_tmp/` 下；用完不需要清理，也不要提交（应被 `.gitignore` 忽略）。禁止在 `src/`、`test/`、仓库根目录随意散落临时文件。
 
 ## 维护要求与权威文档
 

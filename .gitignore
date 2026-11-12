@@ -54,6 +54,7 @@ Thumbs.db
 # Temporary
 *.tmp
 *.temp
+_tmp/
 
 # Ignore local testing/workspace files
 .history/
