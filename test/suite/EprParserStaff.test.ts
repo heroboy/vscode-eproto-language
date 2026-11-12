@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { EprParser } from '../../src/EprParser';
 import {
 	computeDeclarationTagInsertion,
-	computeFieldTagInsertion,
+	computeFieldInsertions,
 	provideCompletionItems,
 } from '../../src/EprParserStaff';
 
@@ -120,10 +120,15 @@ suite('EprParserStaff Tests', () =>
 		assert.ok(contains(labels, 'c2s'));
 	});
 
-	test('suggests the next structure tag after a colon in a header', () =>
+	test('suggests the next structure tag after a colon in a message header', () =>
 	{
 		const labels = labelsAt('message M:', 0, 10);
 		assert.deepStrictEqual(labels, ['1']);
+	});
+
+	test('does not suggest a tag for struct headers', () =>
+	{
+		assert.strictEqual(labelsAt('struct S:', 0, 9), undefined);
 	});
 
 	test('suggests the next field tag after a colon in a field', () =>
@@ -198,25 +203,56 @@ suite('EprParserStaff Tests', () =>
 		);
 	});
 
-	test('computes a field tag insertion', () =>
+	test('computes field tag and semicolon insertions', () =>
 	{
 		const content = joinLines(
 			'struct S',
 			'{',
 			'    int a:1;',
-			'    int b;',
+			'    int b',
 			'};'
 		);
 		const document = createDocument(content);
 		const parser = new EprParser(document);
 
-		assert.deepStrictEqual(
-			computeFieldTagInsertion(document, parser, 3),
-			{ line: 3, character: 9, text: ':2' }
+		//tag 与分号位置相同，合并为一次插入
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 3, true), [
+			{ line: 3, character: 9, text: ':2;' },
+		]);
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 3, false), [
+			{ line: 3, character: 9, text: ':2' },
+		]);
+
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 2, true), [], '已有 tag 和分号时不再插入');
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 0, true), [], '结构体外部不插入');
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 4, true), [], '结束行不插入');
+	});
+
+	test('inserts the semicolon at the end of a field with a default value', () =>
+	{
+		const content = joinLines(
+			'struct S',
+			'{',
+			'    int a:1;',
+			'    int c = 3',
+			'    int d = {',
+			'        1, 2',
+			'    }',
+			'};'
 		);
-		assert.strictEqual(computeFieldTagInsertion(document, parser, 2), null, '已有 tag 不应重复插入');
-		assert.strictEqual(computeFieldTagInsertion(document, parser, 0), null, '结构体外部不插入');
-		assert.strictEqual(computeFieldTagInsertion(document, parser, 4), null, '结束行不插入');
+		const document = createDocument(content);
+		const parser = new EprParser(document);
+
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 3, true), [
+			{ line: 3, character: 9, text: ':2' },
+			{ line: 3, character: 13, text: ';' },
+		]);
+
+		//数组默认值还没闭合：只补 tag，不补分号
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 4, true), [
+			{ line: 4, character: 9, text: ':2' },
+		]);
+		assert.deepStrictEqual(computeFieldInsertions(document, parser, 5, true), [], '数组内部不处理');
 	});
 
 	test('computes a declaration tag insertion', () =>
@@ -255,8 +291,13 @@ suite('EprParserStaff Tests', () =>
 		);
 	});
 
-	test('does not add a tag to enums, userclasses or body lines', () =>
+	test('does not add a tag to structs, enums, userclasses or body lines', () =>
 	{
+		const structContent = joinLines('struct Plain', '{');
+		const structDocument = createDocument(structContent);
+		const structParser = new EprParser(structDocument);
+		assert.strictEqual(computeDeclarationTagInsertion(structDocument, structParser, 0), null);
+
 		const enumContent = 'enum E { A };';
 		const enumDocument = createDocument(enumContent);
 		const enumParser = new EprParser(enumDocument);

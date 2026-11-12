@@ -67,9 +67,9 @@ message SomeMessage:2 s2c   // :2 为消息 id，s2c/c2s/equal/var/msgfrom 为�
 - **编码**：epr 文件默认 GBK（`configurationDefaults` 中已设置 `files.encoding: gbk`），修改 epr 样例时勿改为 UTF-8。
 - **解析器缓存**：`EprParserStaff.ts` 的 `g_Parsers` 以 `document.uri` 为键、按 `document.version` 缓存 `EprParser`；版本变化时整篇重解析（真实协议文件约 0.1–0.5ms，1700 行示例约 4ms），文档关闭时清理。修改解析逻辑时同时考虑补全、自动 tag 与两个 dump 命令的读取。
 - **容错优先**：`EprParser` 不为语法错误抛异常，而是记录 `issues` 后继续；遇到未闭合结构会用「下一个 `struct/message/enum/userclass` 行」恢复，遇到行尾未写 `;` 的字段/枚举项也会收下。解析器只做结构与词法层面的识别，不做类型/取值校验（那是编译器的职责）。
-- **补全触发**：补全与自动 tag 都读 `EprParser` 的行状态（`EprLineInfo`：行首深度、块注释、模式、所属定义、跨行头）。自动补 tag 只在单字符变更（`;`、换行、`{`）时触发，且跳过撤销/重做；回车只在行尾生效，避免把一行拆成两半时误插。
+- **补全触发**：补全与自动 tag 都读 `EprParser` 的行状态（`EprLineInfo`：行首深度、块注释、模式、所属定义、跨行头）。自动补 tag 只在单字符变更（`;`、换行、`{`）时触发，且跳过撤销/重做；回车只在行尾生效，避免把一行拆成两半时误插。字段行回车会同时补 `:tag` 和漏写的 `;`；`message` 头回车/`{` 补消息号，**`struct` 不补 tag**。
 - **格式化器**：只改行首缩进与空白行，不碰行内内容；`EprLineLexer.scanLine` 返回的 token 数组会被复用，需要保存时自行复制。块注释续行刻意保持原样（真实协议里常用于排版或被注释掉的代码）。
-- **测试**：`test/suite/EprFormatter.test.ts`、`EprLexer.test.ts`、`EprParser.test.ts`、`EprParserStaff.test.ts` 使用手写 mock `TextDocument` / 纯 token 断言；新增测试文件需以 `.test.ts` 命名，由 `test/suite/index.ts` 自动收集编译后的 `.test.js`。
+- **测试**：`test/suite/EprFormatter.test.ts`、`EprLexer.test.ts`、`EprParser.test.ts`、`EprParserStaff.test.ts` 使用手写 mock `TextDocument` / 纯 token 断言；新增测试文件需以 `.test.ts` 命名，由 `test/suite/index.ts` 自动收集编译后的 `.test.js`。集成测试**只使用本地 VS Code**（`VSCODE_EXECUTABLE_PATH` 可覆盖），`test/runTest.ts` 不再自动下载运行时；本地 VS Code 正在更新时会直接报错，等更新完成再跑。
 - **语法测试**：`test/grammar/TmLanguage.test.ts` 用 `vscode-textmate` + `vscode-oniguruma` 直接加载 `syntaxes/eproto.tmLanguage.json` 断言分词作用域，入口为 `test/grammar/run.ts`（编译后 `node ./out-test/test/grammar/run.js`）；新增用例按 `suite` / `test` 追加，覆盖示例协议里的常用写法。
 - **已知小坑**：`schema/genSchema.ts` 输出到当前工作目录的 `./epr-project-schema.json`，而仓库中实际文件在 `schema/epr-project-schema.json`；且 `zod` 未列入 `devDependencies`、`schema/` 被 tsconfig 排除。
 - 修改 `package.json` 中的 commands / menus / contributes 后需重新编译并重载窗口才能生效。

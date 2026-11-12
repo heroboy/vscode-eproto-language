@@ -328,6 +328,9 @@ function headerCompletion(
 
 	if (isPunct(last, ':'))
 	{
+		//struct 不需要 tag，只有 message 的消息号需要补全
+		if (kind !== 'message')
+			return undefined;
 		const tag = parser.getNextStructureTag();
 		return tag <= MAX_TAG ? [tagItem(tag, '下一个可用结构 tag')] : undefined;
 	}
@@ -471,38 +474,109 @@ function lexLine(document: vscode.TextDocument, info: EprLineInfo, line: number)
 }
 
 /**
- * 字段行缺少 tag 时，返回应插入的 `:编号`。
+ * 字段行自动补全：缺少 tag 时补 `:编号`；`addSemicolon` 为 true 且语句完整时再补 `;`。
  * 只处理 struct / message 的直接字段行（数组默认值内部不处理）。
  */
-export function computeFieldTagInsertion(
+export function computeFieldInsertions(
 	document: vscode.TextDocument,
 	parser: EprParser,
-	line: number
-): TagInsertion | null
+	line: number,
+	addSemicolon: boolean
+): TagInsertion[]
 {
 	const info = parser.getLineInfo(line);
 	const decl = info.decl;
 	if (!decl)
-		return null;
+		return [];
 	if (decl.kind !== EprDeclKind.Struct && decl.kind !== EprDeclKind.Message)
-		return null;
+		return [];
 	if (decl.bodyDepth <= 0 || info.depth !== decl.bodyDepth)
+		return [];
+
+	const tokens = lexLine(document, info, line);
+	const header = parseFieldHeader(tokens);
+	if (!header || header.name.length === 0)
+		return [];
+
+	const insertions: TagInsertion[] = [];
+
+	if (header.tag === null)
+	{
+		const tag = parser.getNextFieldTag(decl);
+		if (tag <= MAX_TAG)
+			insertions.push({ line, character: header.nameEnd, text: `:${tag}` });
+	}
+
+	if (addSemicolon)
+	{
+		const semicolon = computeSemicolonInsertion(tokens, info, decl, line);
+		if (semicolon)
+			insertions.push(semicolon);
+	}
+
+	return mergeInsertions(insertions);
+}
+
+/** 字段语句已写完但缺少 `;` 时，返回分号插入位置（跳过行尾注释）。 */
+function computeSemicolonInsertion(
+	tokens: readonly EprToken[],
+	info: EprLineInfo,
+	decl: EprDeclInfo,
+	line: number
+): TagInsertion | null
+{
+	let depth = info.depth;
+	let lastCode: EprToken | undefined;
+
+	for (const token of tokens)
+	{
+		if (token.type === EprTokenType.Comment)
+			continue;
+
+		if (token.type === EprTokenType.Punctuation)
+		{
+			if (token.text === '{')
+				depth++;
+			else if (token.text === '}')
+				depth = Math.max(0, depth - 1);
+		}
+		lastCode = token;
+	}
+
+	//数组默认值还没闭合，或者语句停在不该结束的位置
+	if (!lastCode || depth !== decl.bodyDepth)
+		return null;
+	if (lastCode.type === EprTokenType.Punctuation
+		&& [ ';', '=', ',', '{', ':', '[', '.' ].includes(lastCode.text))
 		return null;
 
-	const header = parseFieldHeader(lexLine(document, info, line));
-	if (!header || header.tag !== null || header.name.length === 0)
-		return null;
+	return { line, character: lastCode.end, text: ';' };
+}
 
-	const tag = parser.getNextFieldTag(decl);
-	if (tag > MAX_TAG)
-		return null;
+/** 同一位置的插入合并成一个（例如 `int a` 的 tag 与分号都插在字段名之后）。 */
+function mergeInsertions(insertions: TagInsertion[]): TagInsertion[]
+{
+	if (insertions.length < 2)
+		return insertions;
 
-	return { line, character: header.nameEnd, text: `:${tag}` };
+	insertions.sort((a, b) =>
+		a.line !== b.line ? a.line - b.line : a.character - b.character);
+
+	const merged: TagInsertion[] = [];
+	for (const insertion of insertions)
+	{
+		const last = merged[merged.length - 1];
+		if (last && last.line === insertion.line && last.character === insertion.character)
+			merged[merged.length - 1] = { ...last, text: last.text + insertion.text };
+		else
+			merged.push(insertion);
+	}
+	return merged;
 }
 
 /**
- * struct / message 头部缺少 tag 时，返回应插入的 `:编号`。
- * `message Foo {` / `message Foo` 回车都会命中；enum / userclass 不处理。
+ * message 头部缺少消息号时，返回应插入的 `:编号`。
+ * `message Foo {` / `message Foo` 回车都会命中；struct / enum / userclass 不处理。
  */
 export function computeDeclarationTagInsertion(
 	document: vscode.TextDocument,
@@ -523,8 +597,8 @@ export function computeDeclarationTagInsertion(
 	if (!isDeclKeyword(header[0].text))
 		return null;
 
-	const kind = header[0].text;
-	if (kind !== 'struct' && kind !== 'message')
+	//struct 不需要 tag
+	if (header[0].text !== 'message')
 		return null;
 
 	const nameToken = header[1];
@@ -543,13 +617,14 @@ export function computeDeclarationTagInsertion(
 	return { line, character: nameToken.end, text: `:${tag}` };
 }
 
-function applyTagInsertion(document: vscode.TextDocument, insertion: TagInsertion | null)
+function applyInsertions(document: vscode.TextDocument, insertions: readonly TagInsertion[])
 {
-	if (!insertion)
+	if (insertions.length === 0)
 		return;
 
 	const edit = new vscode.WorkspaceEdit();
-	edit.insert(document.uri, new vscode.Position(insertion.line, insertion.character), insertion.text);
+	for (const insertion of insertions)
+		edit.insert(document.uri, new vscode.Position(insertion.line, insertion.character), insertion.text);
 	void vscode.workspace.applyEdit(edit);
 }
 
@@ -585,7 +660,7 @@ export function onDidChangeTextDocument(e: vscode.TextDocumentChangeEvent)
 		const token = lexLine(document, info, line).find(t => t.start === character);
 		if (!isPunct(token, ';'))
 			return;
-		applyTagInsertion(document, computeFieldTagInsertion(document, parser, line));
+		applyInsertions(document, computeFieldInsertions(document, parser, line, false));
 		return;
 	}
 
@@ -596,16 +671,24 @@ export function onDidChangeTextDocument(e: vscode.TextDocumentChangeEvent)
 		if (nextLine.trim().length > 0)
 			return;
 
-		const insertion = computeFieldTagInsertion(document, parser, line)
-			?? computeDeclarationTagInsertion(document, parser, line);
-		applyTagInsertion(document, insertion);
+		//字段：补 tag，同时补上漏写的 ;
+		const fieldInsertions = computeFieldInsertions(document, parser, line, true);
+		if (fieldInsertions.length > 0)
+		{
+			applyInsertions(document, fieldInsertions);
+			return;
+		}
+
+		const declInsertion = computeDeclarationTagInsertion(document, parser, line);
+		applyInsertions(document, declInsertion ? [declInsertion] : []);
 		return;
 	}
 
 	const token = lexLine(document, info, line).find(t => t.start === character);
 	if (!isPunct(token, '{'))
 		return;
-	applyTagInsertion(document, computeDeclarationTagInsertion(document, parser, line));
+	const insertion = computeDeclarationTagInsertion(document, parser, line);
+	applyInsertions(document, insertion ? [insertion] : []);
 }
 
 /* ========================================================================== */

@@ -24,29 +24,20 @@ async function main(): Promise<void> {
 	const launchArgs = ['--disable-extensions'];
 
 	const localCandidates = getCandidateVSCodeExecutables();
-	if (localCandidates.length > 0) {
-		const localExecutable = localCandidates[0];
-		console.log(`[test] Using local VS Code: ${localExecutable}`);
-		try {
-			await runTests({
-				vscodeExecutablePath: localExecutable,
-				extensionDevelopmentPath,
-				extensionTestsPath,
-				launchArgs
-			});
-			return;
-		} catch (err) {
-			console.warn('[test] Local VS Code run failed, fallback to downloaded stable runtime.');
-			console.warn(err);
-		}
+	if (localCandidates.length === 0) {
+		throw new Error(
+			'未找到本地 VS Code。请先安装 VS Code，或用 VSCODE_EXECUTABLE_PATH 指定 Code.exe。'
+			+ '本测试脚本不会自动下载 VS Code。'
+		);
 	}
 
-	console.log('[test] No usable local VS Code found, fallback to stable downloaded runtime.');
+	const localExecutable = localCandidates[0];
+	console.log(`[test] Using local VS Code: ${localExecutable}`);
 	await runTests({
+		vscodeExecutablePath: localExecutable,
 		extensionDevelopmentPath,
 		extensionTestsPath,
-		launchArgs,
-		version: 'stable'
+		launchArgs
 	});
 }
 
