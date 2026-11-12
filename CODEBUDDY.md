@@ -27,7 +27,7 @@ pnpm run clean:vscode-test  # 清理 .vscode-test 缓存
 - `src/EprLexer.ts` — 逐行词法扫描器 `EprLineLexer`：把一行切成 Identifier / Number / String / Comment / Punctuation / Unknown，跨行只维护块注释状态；单趟扫描、不回溯，供格式化器与解析器复用。
 - `src/EprParser.ts` — 容错的结构解析器 `EprParser`：基于 `EprLexer` 解析协议指令、import、`struct`/`message`/`enum`/`userclass` 头部与字段/枚举项，支持跨行头、同一行写 `{`、漏写 `}`、漏写 `;`；输出 `declarations` / `directives` / `imports` / `issues` / 每行 `EprLineInfo`。同时导出 `parseFieldHeader` 供补全使用。
 - `src/EprParserStaff.ts` — 提供给 VS Code 的能力：补全项提供者（关键字/内建与自定义类型/指令/结构修饰符/指令取值/tag）、输入 `;`/回车/`{` 后自动补 tag、`eproto.dumpCurrentLineState` 与 `eproto.dumpAllState` 调试命令。按 `document.version` 缓存解析结果。
-- `src/Perf.ts` — 回调耗时监控：`measureCallback` / `warnIfSlow` 在耗时超过 20ms 时向 `EPR Perf` OutputChannel 写一条 `[WARN]`（含回调名、耗时、文件与行列）。目前用于补全、`onDidChangeTextDocument`（自动 tag）和格式化三个回调。
+- `src/Perf.ts` — 回调耗时监控：`measureCallback` / `warnIfSlow` 在耗时超过 20ms 时向已有的 `EPR Parser` OutputChannel 写一条 `[WARN]`（含回调名、耗时、文件与行列）。目前用于补全、`onDidChangeTextDocument`（自动 tag）和格式化三个回调。
 - `src/EprFormatter.ts` — `DocumentFormattingEditProvider` 实现，基于 `EprLineLexer` 只调整行首缩进与空白行：按花括号嵌套深度缩进、行首 `}` 回退一级、注释/字符串里的花括号不计数、块注释续行保持原样，对语法错误尽量容错。
 - `src/InitEprDocument.ts` — `EPR: Init EPR Document`，在文件头补齐 `protoname/protoid/interfacestyle/...` 配置项，已存在的项不重复添加。
 - `src/compile.ts` — `EPR: Compile Current EPR File`，保存文件后以 `vscode.Task` 调用 `compiler/eProtoCompilerExeV2.exe <epr 路径>`，输出到 `EPR Compile` OutputChannel。
@@ -70,7 +70,7 @@ message SomeMessage:2 s2c   // :2 为消息 id，s2c/c2s/equal/var/msgfrom 为�
 - **容错优先**：`EprParser` 不为语法错误抛异常，而是记录 `issues` 后继续；遇到未闭合结构会用「下一个 `struct/message/enum/userclass` 行」恢复，遇到行尾未写 `;` 的字段/枚举项也会收下。解析器只做结构与词法层面的识别，不做类型/取值校验（那是编译器的职责）。
 - **补全触发**：补全与自动 tag 都读 `EprParser` 的行状态（`EprLineInfo`：行首深度、块注释、模式、所属定义、跨行头）。空格与 `:` 是补全触发字符，`message XX ` 后会立即列出修饰符；定义头判断优先于字段行，漏写 `}` 时也能继续补修饰符。自定义类型按当前单词前缀过滤；文件定义数超过 200 时，空前缀只列内建类型，避免一次性生成几千个补全项。自动补 tag 只在单字符变更（`;`、换行、`{`）时触发，且跳过撤销/重做；回车只在行尾生效，避免把一行拆成两半时误插。字段行回车会同时补 `:tag` 和漏写的 `;`；`message` 头回车/`{` 补消息号，**`struct` 不补 tag**。
 - **格式化器**：只改行首缩进与空白行，不碰行内内容；`EprLineLexer.scanLine` 返回的 token 数组会被复用，需要保存时自行复制。块注释续行刻意保持原样（真实协议里常用于排版或被注释掉的代码）。
-- **性能告警**：补全、`onDidChangeTextDocument`、格式化三个回调都经过 `measureCallback`；单次超过 20ms 会在 `EPR Perf` OutputChannel 追加 `[WARN] 回调名 耗时 | 文件位置`，用于定位卡顿。阈值与格式在 `src/Perf.ts`。
+- **性能告警**：补全、`onDidChangeTextDocument`、格式化三个回调都经过 `measureCallback`；单次超过 20ms 会在已有的 `EPR Parser` OutputChannel 追加 `[WARN] 回调名 耗时 | 文件位置`，用于定位卡顿。阈值与格式在 `src/Perf.ts`；注意 `eproto.dump*` 命令会清空该通道。
 - **测试**：`test/suite/EprFormatter.test.ts`、`EprLexer.test.ts`、`EprParser.test.ts`、`EprParserStaff.test.ts`、`Perf.test.ts` 使用手写 mock `TextDocument` / 纯 token 断言；新增测试文件需以 `.test.ts` 命名，由 `test/suite/index.ts` 自动收集编译后的 `.test.js`。补全/插入位置相关的测试用 `|` 标记光标（见 `EprParserStaff.test.ts` 的 `createMarkedDocument`），喂给解析器前移除标记，不要写死行列号；测试文本优先用模板字符串。集成测试**只使用本地 VS Code**（`VSCODE_EXECUTABLE_PATH` 可覆盖），`test/runTest.ts` 不再自动下载运行时；本地 VS Code 正在更新时会直接报错，等更新完成再跑。
 - **语法测试**：`test/grammar/TmLanguage.test.ts` 用 `vscode-textmate` + `vscode-oniguruma` 直接加载 `syntaxes/eproto.tmLanguage.json` 断言分词作用域，入口为 `test/grammar/run.ts`（编译后 `node ./out-test/test/grammar/run.js`）；新增用例按 `suite` / `test` 追加，覆盖示例协议里的常用写法。
 - **已知小坑**：`schema/genSchema.ts` 输出到当前工作目录的 `./epr-project-schema.json`，而仓库中实际文件在 `schema/epr-project-schema.json`；且 `zod` 未列入 `devDependencies`、`schema/` 被 tsconfig 排除。

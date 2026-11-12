@@ -1,15 +1,14 @@
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 /** 回调耗时超过这个值就记录一条 warning */
 export const PERF_WARN_THRESHOLD_MS = 20;
 
-let g_PerfOutput: vscode.OutputChannel | undefined;
+let g_Output: vscode.OutputChannel | undefined;
 
-export function getPerfOutputChannel(): vscode.OutputChannel
+/** 复用扩展已有的输出通道（EPR Parser），避免再创建一个 */
+export function setPerfOutputChannel(channel: vscode.OutputChannel): void
 {
-	if (!g_PerfOutput)
-		g_PerfOutput = vscode.window.createOutputChannel('EPR Perf');
-	return g_PerfOutput;
+	g_Output = channel;
 }
 
 /**
@@ -31,11 +30,11 @@ export function warnIfSlow(name: string, startedAt: number, detail?: string): vo
 	if (!text)
 		return;
 
-	getPerfOutputChannel().appendLine(`${new Date().toISOString()} ${text}`);
+	g_Output?.appendLine(`${new Date().toISOString()} ${text}`);
 }
 
 /**
- * 测量一个回调的耗时，超过阈值时写入 `EPR Perf` 输出通道。
+ * 测量一个回调的耗时，超过阈值时写入已注册的输出通道。
  * detail 建议带上文件路径、行列、行数等定位信息。
  */
 export function measureCallback<T>(name: string, callback: () => T, detail?: string): T

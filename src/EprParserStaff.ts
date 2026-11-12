@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EprLineLexer, EprToken, EprTokenType } from './EprLexer';
-import { getPerfOutputChannel, measureCallback } from './Perf';
+import { measureCallback, setPerfOutputChannel } from './Perf';
 import {
 	EprDeclInfo,
 	EprDeclKind,
@@ -947,8 +947,9 @@ export function dumpAllState()
 
 export function activateEprParserStaff(context: vscode.ExtensionContext)
 {
-	context.subscriptions.push(getOutputChannel());
-	context.subscriptions.push(getPerfOutputChannel());
+	const output = getOutputChannel();
+	context.subscriptions.push(output);
+	setPerfOutputChannel(output);
 
 	context.subscriptions.push(
 		vscode.languages.registerCompletionItemProvider('eproto', { provideCompletionItems }, ':', ' ')
