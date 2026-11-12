@@ -184,6 +184,50 @@ struct Later
 		assert.ok(contains(labels, 'responses'));
 		assert.ok(contains(labels, 'extends'));
 		assert.ok(contains(labels, 'ts'));
+		assert.ok(contains(labels, 'norecvfun'));
+	});
+
+	test('keeps modifier completion when a previous declaration is unclosed', () =>
+	{
+		const labels = labelsAt(`struct S
+{
+    int a:1;
+message M |`);
+
+		assert.ok(contains(labels, 's2c'));
+		assert.ok(contains(labels, 'norecvfun'));
+	});
+
+	test('keeps suggesting types while the type name is being typed', () =>
+	{
+		const labels = labelsAt(`struct S
+{
+    in|
+};`);
+
+		assert.ok(contains(labels, 'int'));
+		assert.ok(contains(labels, 'int64'));
+	});
+
+	test('filters user types by the typed prefix', () =>
+	{
+		const labels = labelsAt(`struct MyType
+{
+    int a:1;
+};
+
+struct Other
+{
+    int b:1;
+};
+
+message M:2
+{
+    My|
+};`);
+
+		assert.ok(contains(labels, 'MyType'));
+		assert.ok(!contains(labels, 'Other'));
 	});
 
 	test('does not repeat an already used modifier', () =>

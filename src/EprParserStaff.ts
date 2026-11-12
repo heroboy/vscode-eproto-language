@@ -28,6 +28,26 @@ const MESSAGE_MODIFIERS = [
 	'c2s', 's2c', 'equal', 'var', 'noprotect', 'opt', 'deprecated',
 	'norecvfun', 'hook', 'msgfrom', 'extends', 'public', 'responses', 'asyncresponses', 'ts',
 ];
+const MODIFIER_DETAILS: Record<string, string> = {
+	c2s: '客户端 → 服务器',
+	s2c: '服务器 → 客户端',
+	equal: '双向（缺省）',
+	var: '按需打包：只有赋过值的字段才写入',
+	noprotect: '与 var 搭配，成员保持公开',
+	opt: '可选：未赋值时不写入报文',
+	deprecated: '废弃',
+	norecvfun: '不生成接收回调，也不进入报文分发',
+	hook: '额外挂到 Hook 接口（TS）',
+	msgfrom: '生成“从某消息构造”的辅助函数（历史语言）',
+	extends: '继承一个已声明的 struct/message',
+	public: '等价 extends（历史写法）',
+	responses: '声明该请求对应的响应消息',
+	asyncresponses: '声明异步响应消息',
+	ts: 'TypeScript 结构配置',
+	class: '强类型枚举（enum class）',
+	itemsafe: '历史标记，当前无实际效果',
+};
+
 const ENUM_MODIFIERS = ['class', 'itemsafe'];
 const ENUM_BASE_TYPES = ['char', 'uchar', 'byte', 'short', 'ushort', 'int', 'uint', 'long', 'ulong'];
 const USERCLASS_ATTRIBUTES = ['extends', 'public', 'cppinclude', 'csharpnamespace', 'as3pack'];
@@ -122,6 +142,23 @@ function isPunct(token: EprToken | undefined, text: string): boolean
 	return !!token && token.type === EprTokenType.Punctuation && token.text === text;
 }
 
+/** 与 EprParser 的恢复逻辑保持一致：这一行看起来像定义头而不是字段 */
+function looksLikeDeclarationLine(tokens: readonly EprToken[]): boolean
+{
+	let hasBrace = false;
+	let hasSemicolon = false;
+	for (const token of tokens)
+	{
+		if (token.type !== EprTokenType.Punctuation)
+			continue;
+		if (token.text === '{')
+			hasBrace = true;
+		else if (token.text === ';')
+			hasSemicolon = true;
+	}
+	return hasBrace || !hasSemicolon;
+}
+
 function declKindToCompletionKind(kind: EprDeclKind): vscode.CompletionItemKind
 {
 	switch (kind)
@@ -132,20 +169,33 @@ function declKindToCompletionKind(kind: EprDeclKind): vscode.CompletionItemKind
 	}
 }
 
-function typeItems(parser: EprParser, line: number): vscode.CompletionItem[]
+/** 大文件里不一次列出全部自定义类型，否则补全项可能有几千个 */
+const MAX_BROWSE_DECLARATIONS = 200;
+
+function matchesPrefix(name: string, prefix: string): boolean
+{
+	return prefix.length === 0 || name.toLowerCase().startsWith(prefix.toLowerCase());
+}
+
+function typeItems(parser: EprParser, line: number, prefix: string): vscode.CompletionItem[]
 {
 	const items: vscode.CompletionItem[] = [];
-	const seen = new Set<string>();
 
 	for (const name of BUILTIN_TYPES)
 	{
-		seen.add(name);
-		items.push(makeItem(name, vscode.CompletionItemKind.TypeParameter, '内建类型'));
+		if (matchesPrefix(name, prefix))
+			items.push(makeItem(name, vscode.CompletionItemKind.TypeParameter, '内建类型'));
 	}
 
-	for (const decl of parser.getTypeDeclarationsBefore(line))
+	if (prefix.length === 0 && parser.declarations.length > MAX_BROWSE_DECLARATIONS)
+		return items;
+
+	const seen = new Set<string>(BUILTIN_TYPES);
+	for (const decl of parser.declarations)
 	{
-		if (!decl.name || seen.has(decl.name))
+		if (decl.line >= line)
+			break;
+		if (!decl.name || seen.has(decl.name) || !matchesPrefix(decl.name, prefix))
 			continue;
 		seen.add(decl.name);
 		const detail = decl.tag !== null ? `${decl.kind}:${decl.tag}` : decl.kind;
@@ -155,12 +205,22 @@ function typeItems(parser: EprParser, line: number): vscode.CompletionItem[]
 	return items;
 }
 
-function userTypeItems(parser: EprParser, line: number, kinds: readonly EprDeclKind[]): vscode.CompletionItem[]
+function userTypeItems(
+	parser: EprParser,
+	line: number,
+	kinds: readonly EprDeclKind[],
+	prefix: string
+): vscode.CompletionItem[]
 {
+	if (prefix.length === 0 && parser.declarations.length > MAX_BROWSE_DECLARATIONS)
+		return [];
+
 	const items: vscode.CompletionItem[] = [];
-	for (const decl of parser.getTypeDeclarationsBefore(line))
+	for (const decl of parser.declarations)
 	{
-		if (!decl.name || !kinds.includes(decl.kind))
+		if (decl.line >= line)
+			break;
+		if (!decl.name || !kinds.includes(decl.kind) || !matchesPrefix(decl.name, prefix))
 			continue;
 		const detail = decl.tag !== null ? `${decl.kind}:${decl.tag}` : decl.kind;
 		items.push(makeItem(decl.name, declKindToCompletionKind(decl.kind), detail));
@@ -220,7 +280,9 @@ function fieldCompletion(
 	info: EprLineInfo,
 	line: number,
 	before: readonly EprToken[],
-	depthAtCursor: number
+	depthAtCursor: number,
+	prefix: string,
+	character: number
 ): vscode.CompletionItem[] | undefined
 {
 	const decl = info.decl;
@@ -250,7 +312,15 @@ function fieldCompletion(
 		const items: vscode.CompletionItem[] = [
 			makeItem('card', vscode.CompletionItemKind.Keyword, '字段修饰（历史）', undefined, '0'),
 		];
-		return items.concat(typeItems(parser, line));
+		return items.concat(typeItems(parser, line, prefix));
+	}
+
+	// 只有一个标识符且光标停在它末尾：多半还在输入类型名
+	if (identifiers.length === 1)
+	{
+		if (identifiers[0].end === character)
+			return typeItems(parser, line, prefix);
+		return undefined;
 	}
 
 	const typeName = identifiers[0].text;
@@ -269,8 +339,10 @@ function fieldCompletion(
 			const enumDecl = findEnumBefore(parser, typeName, line);
 			if (enumDecl)
 			{
-				return enumDecl.enumItems.map(item =>
-					makeItem(item.name, vscode.CompletionItemKind.EnumMember, `${typeName} 的枚举项`));
+				return enumDecl.enumItems
+					.filter(item => matchesPrefix(item.name, prefix))
+					.map(item =>
+						makeItem(item.name, vscode.CompletionItemKind.EnumMember, `${typeName} 的枚举项`));
 			}
 			return undefined;
 		}
@@ -284,8 +356,10 @@ function fieldCompletion(
 
 function findEnumBefore(parser: EprParser, name: string, line: number): EprDeclInfo | undefined
 {
-	for (const decl of parser.getTypeDeclarationsBefore(line))
+	for (const decl of parser.declarations)
 	{
+		if (decl.line >= line)
+			break;
 		if (decl.kind === EprDeclKind.Enum && decl.name === name)
 			return decl;
 	}
@@ -298,11 +372,11 @@ function headerCompletion(
 	kind: string,
 	line: number,
 	before: readonly EprToken[],
-	depthAtCursor: number
+	prefix: string
 ): vscode.CompletionItem[] | undefined
 {
-	// 已经进入结构体内部（同一行写了 {）
-	if (depthAtCursor > 0)
+	// 同一行已经写了 {，光标进入结构体内部
+	if (before.some(token => isPunct(token, '{')))
 		return undefined;
 
 	const last = before[before.length - 1];
@@ -321,7 +395,7 @@ function headerCompletion(
 	if (kind === 'userclass')
 	{
 		if (last && (last.text === 'extends' || last.text === 'public'))
-			return userTypeItems(parser, line, [EprDeclKind.Struct, EprDeclKind.Message]);
+			return userTypeItems(parser, line, [EprDeclKind.Struct, EprDeclKind.Message], prefix);
 		return USERCLASS_ATTRIBUTES.map(name =>
 			makeItem(name, vscode.CompletionItemKind.Keyword, 'userclass 属性'));
 	}
@@ -336,22 +410,28 @@ function headerCompletion(
 	}
 
 	if (last && (last.text === 'extends' || last.text === 'public'))
-		return userTypeItems(parser, line, [EprDeclKind.Struct, EprDeclKind.Message]);
+		return userTypeItems(parser, line, [EprDeclKind.Struct, EprDeclKind.Message], prefix);
 
 	if (last && (last.text === 'responses' || last.text === 'asyncresponses'))
-		return userTypeItems(parser, line, [EprDeclKind.Message]);
+		return userTypeItems(parser, line, [EprDeclKind.Message], prefix);
 
 	if (isPunct(last, ',') && before.some(token =>
 		token.text === 'responses' || token.text === 'asyncresponses'))
 	{
-		return userTypeItems(parser, line, [EprDeclKind.Message]);
+		return userTypeItems(parser, line, [EprDeclKind.Message], prefix);
 	}
 
 	const modifiers = kind === 'message' ? MESSAGE_MODIFIERS : STRUCT_MODIFIERS;
 	const used = new Set(before.map(token => token.text));
 	return modifiers
 		.filter(name => !used.has(name))
-		.map(name => makeItem(name, vscode.CompletionItemKind.Keyword, `${kind} 修饰符`));
+		.map((name, index) => makeItem(
+			name,
+			vscode.CompletionItemKind.Keyword,
+			MODIFIER_DETAILS[name] ?? `${kind} 修饰符`,
+			undefined,
+			index.toString().padStart(2, '0')
+		));
 }
 
 /**
@@ -375,6 +455,8 @@ export function provideCompletionItems(
 	const tokens = lexer.scanLine(lineText);
 
 	const beforeText = lineText.substring(0, position.character);
+	const wordMatch = /[A-Za-z_][A-Za-z0-9_]*$/.exec(beforeText);
+	const prefix = wordMatch ? wordMatch[0] : '';
 	const before: EprToken[] = [];
 	let depthAtCursor = info.depth;
 
@@ -411,12 +493,19 @@ export function provideCompletionItems(
 
 	const firstCode = tokens.find(token => token.type !== EprTokenType.Comment);
 	const lineStartsWithDecl = !!firstCode
-		&& info.mode === EprLineMode.Top
 		&& firstCode.start < position.character
-		&& isDeclKeyword(firstCode.text);
+		&& isDeclKeyword(firstCode.text)
+		&& (info.mode === EprLineMode.Top || looksLikeDeclarationLine(tokens));
 
 	const headerKind = info.headerKind
 		?? (lineStartsWithDecl ? firstCode!.text : null);
+
+	// 定义头优先：上一个结构体漏写 } 时，解析器会在当前行恢复成 Top，
+	// 但该行的行首状态仍属于旧结构体，必须先按定义头处理。
+	if (headerKind)
+	{
+		return headerCompletion(parser, headerKind, position.line, before, prefix);
+	}
 
 	// 结构体 / 枚举内部
 	const decl = info.decl;
@@ -424,13 +513,7 @@ export function provideCompletionItems(
 	{
 		if (decl.kind === EprDeclKind.Enum)
 			return undefined;
-		return fieldCompletion(parser, info, position.line, before, depthAtCursor);
-	}
-
-	// 定义头（含跨行头部、同行写了 { 的情况）
-	if (headerKind)
-	{
-		return headerCompletion(parser, headerKind, position.line, before, depthAtCursor);
+		return fieldCompletion(parser, info, position.line, before, depthAtCursor, prefix, position.character);
 	}
 
 	// 顶层
@@ -844,7 +927,7 @@ export function activateEprParserStaff(context: vscode.ExtensionContext)
 	context.subscriptions.push(getOutputChannel());
 
 	context.subscriptions.push(
-		vscode.languages.registerCompletionItemProvider('eproto', { provideCompletionItems }, ':')
+		vscode.languages.registerCompletionItemProvider('eproto', { provideCompletionItems }, ':', ' ')
 	);
 
 	context.subscriptions.push(

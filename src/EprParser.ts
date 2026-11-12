@@ -214,6 +214,7 @@ export class EprParser
 	private openDecl: EprDeclInfo | null = null;
 	private buffer: EprToken[] = [];
 	private bufferStartLine = -1;
+	private maxStructureTag = 0;
 	private directiveNameCache: Set<string> | null = null;
 
 	constructor(document: EprTextDocumentLike)
@@ -259,13 +260,7 @@ export class EprParser
 	/** 全文件下一个可用的结构 tag（struct / message 的 tag 全局唯一）。 */
 	getNextStructureTag(): number
 	{
-		let max = 0;
-		for (const decl of this.declarations)
-		{
-			if (decl.tag !== null && decl.tag > max)
-				max = decl.tag;
-		}
-		return max + 1;
+		return this.maxStructureTag + 1;
 	}
 
 	/** 当前位置之前已经声明过的类型（遵守「先声明后使用」）。 */
@@ -795,6 +790,9 @@ export class EprParser
 			if (DECL_MODIFIERS.has(token.text) && !modifiers.includes(token.text))
 				modifiers.push(token.text);
 		}
+
+		if (decl.tag !== null && decl.tag > this.maxStructureTag)
+			this.maxStructureTag = decl.tag;
 
 		return decl;
 	}
