@@ -1,8 +1,30 @@
-.vscode/**
+# 源码与构建输入：运行时只用 out/
+src/**
+tsconfig.json
+tsconfig.test.json
+schema/genSchema.ts
+
+# 测试
+test/**
+out-test/**
 .vscode-test/**
 .vscode-test-cache/**
-.gitignore
-vsc-extension-quickstart.md
+
+# 本地参考与临时文件
+_tmp/**
+samples/**
 test.epr
 test2.epr
-samples/**
+epr格式.md
+prompt.txt
+vsc-extension-quickstart.md
+CODEBUDDY.md
+
+# 依赖与锁文件
+node_modules/**
+pnpm-lock.yaml
+*.vsix
+.vscode/**
+.history/**
+.github/**
+.gitignore
